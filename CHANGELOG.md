@@ -6,17 +6,19 @@ date:29/03/2026
 # Apricity — Changelog
 ---
 
-## v1.2.0 - 29/03/2026
+## v1.2.0 — 29/03/2026
 
 ### Bug Fixes
-- **O button was not opening correct note** - When accessing the browser 
-  version of note, the selected note was not opening and only the first
-  one was showing up. User had to manually navigate through all the 
-  notes. 
+- **o key opens correct note** — SSE now sends open event to browser
+  viewer. Browser focuses existing window instead of opening new tab.
+  On first open, waits 2 seconds for SSE connection before sending.
+- **BrokenPipeError suppressed** — server no longer prints pipe errors
+  when browser closes a connection while switching notes.
 
-### Files Changed
--  'Apricity.py' - Fixed 'o' button issue.
-   BUILD bumped 1.1.4 -> 1.2.0
+### Files changed
+- `Apricity.py` — o key fix, threading, focus_browser, is_browser_open
+- `vault.py` — BrokenPipeError handling, handle_error suppressed
+  BUILD bumped 1.1.4 - 1.2.0
 
 ---
  
