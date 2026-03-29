@@ -357,6 +357,8 @@ function wireIframeLinks(iframe) {
     doc.querySelectorAll('a[href]').forEach(a => {
       const h = a.getAttribute('href');
       if (!h || h.startsWith('http')||h.startsWith('//')||h.startsWith('mailto')||h.startsWith('#')) return;
+      // Let PDFs and other non-note files open normally in browser
+      if (h.match(/\.(pdf|png|jpg|jpeg|gif|svg|mp4|zip)$/i)) return;
       a.addEventListener('click', e => {
         e.preventDefault();
         // Resolve relative link to a note
