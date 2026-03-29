@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 """
-explore.py  —  Apricity / KnowledgeVault TUI
+Apricity / KnowledgeVault TUI
 ---------------------------------------------
-Build : 1.2.0
-Requires vault.py to be running.
-
 Controls:
   j / ↓       move down
   k / ↑       move up
@@ -19,7 +16,7 @@ Controls:
   q           quit
 """
 
-BUILD = "1.2.0"
+BUILD = "1.3.0"
 
 import curses
 import json
@@ -396,6 +393,46 @@ def draw_preview(win, item, server_ok, rg_matches=None, preview_scroll=0):
             pass
 
     win.noutrefresh()
+
+
+# ── PDF helpers ────────────────────────────────────────────────
+def extract_pdfs_from_note(md_path):
+    """Find all PDF links in a note, plus any PDFs in the same folder."""
+    import re
+    vault_dir = os.path.expanduser("~/KnowledgeVault")
+    folder    = os.path.dirname(os.path.join(vault_dir, md_path))
+    pdfs      = []
+
+    # Parse PDF links from markdown
+    try:
+        full = os.path.join(vault_dir, md_path)
+        with open(full, 'r', encoding='utf-8', errors='ignore') as f:
+            text = f.read()
+        for m in re.finditer(r'\[([^\]]+)\]\(([^)]+\.pdf)\)', text, re.IGNORECASE):
+            pdf_name = m.group(2)
+            pdf_path = os.path.join(folder, pdf_name)
+            if os.path.exists(pdf_path):
+                pdfs.append((m.group(1), pdf_path))
+    except Exception:
+        pass
+
+    # Also find any PDFs sitting in the same folder
+    try:
+        for f in sorted(os.listdir(folder)):
+            if f.lower().endswith('.pdf'):
+                full_path = os.path.join(folder, f)
+                if not any(p == full_path for _, p in pdfs):
+                    pdfs.append((f, full_path))
+    except Exception:
+        pass
+
+    return pdfs
+
+
+def open_pdf(pdf_path):
+    """Open a PDF in the system default viewer (Preview.app on macOS)."""
+    subprocess.Popen(["open", pdf_path],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 # ── Full text search (pure Python) ────────────────────────────
@@ -804,6 +841,28 @@ def main(stdscr):
                                         scroll       = max(0, idx - 3)
                                         preview_scroll = 0
                                         break
+                            break
+
+        elif key == ord('p'):   # open PDF
+            if current and current["_type"] == "note":
+                pdfs = extract_pdfs_from_note(current["md"])
+                if len(pdfs) == 1:
+                    open_pdf(pdfs[0][1])
+                elif len(pdfs) > 1:
+                    # Show picker if multiple PDFs
+                    link_sel = 0
+                    pdf_names = [name for name, _ in pdfs]
+                    while True:
+                        draw_link_picker(stdscr, pdf_names, link_sel)
+                        k2 = stdscr.getch()
+                        if k2 in (27,):
+                            break
+                        elif k2 in (ord('j'), curses.KEY_DOWN):
+                            link_sel = min(link_sel + 1, len(pdfs) - 1)
+                        elif k2 in (ord('k'), curses.KEY_UP):
+                            link_sel = max(link_sel - 1, 0)
+                        elif k2 in (10, 13):
+                            open_pdf(pdfs[link_sel][1])
                             break
 
         elif key == ord('o'):   # open note in browser
