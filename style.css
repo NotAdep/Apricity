@@ -1,0 +1,313 @@
+/* ============================================================
+   Notes — style.css
+   Dracula-derived theme, refined for mathematical/technical writing
+   System fonts only — fully offline, no external dependencies
+   ============================================================ */
+
+/* ── Variables ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0f0f11;
+  --bg2:       #181820;
+  --bg3:       #1e1e28;
+  --bg4:       #252530;
+  --border:    #2e2e3a;
+  --border2:   #3a3a48;
+
+  --fg:        #e8e8f0;
+  --fg2:       #a8a8b8;
+  --fg3:       #606070;
+
+  /* Dracula palette, slightly desaturated for long reading */
+  --cyan:      #79daf2;
+  --green:     #4fd98e;
+  --purple:    #c4a4fc;
+  --orange:    #ffb86c;
+  --yellow:    #f1eb8c;
+  --pink:      #f28fad;
+  --red:       #ff6e6e;
+  --comment:   #5c6080;
+
+  --font-body: 'Charter', 'Bitstream Charter', Georgia, serif;
+  --font-ui:   -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'Menlo', 'Monaco', 'Courier New', monospace;
+
+  --toc-width: 220px;
+  --content-max: 720px;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+
+/* ── Reset & Base ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  line-height: 1.8;
+  margin: 0;
+  padding: 48px 48px 96px calc(var(--toc-width) + 80px);
+  max-width: calc(var(--toc-width) + 80px + var(--content-max));
+}
+
+/* ── Header block (pandoc metadata) ────────────────────────── */
+#title-block-header {
+  margin-bottom: 2.4em;
+  padding-bottom: 1.2em;
+  border-bottom: 1px solid var(--border2);
+}
+
+header h1.title {
+  font-family: var(--font-body);
+  font-size: 2.4em;
+  font-weight: 600;
+  color: var(--cyan);
+  line-height: 1.25;
+  margin: 0 0 0.2em;
+  letter-spacing: -0.01em;
+}
+
+.author {
+  font-family: var(--font-ui);
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--fg2);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.date {
+  font-family: var(--font-ui);
+  font-size: 0.85em;
+  color: var(--comment);
+  font-style: normal;
+  margin: 0.2em 0 0;
+}
+
+/* ── Body headings ──────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-body);
+  line-height: 1.3;
+  margin: 2em 0 0.5em;
+}
+
+h1 { font-size: 1.7em; color: var(--green);  font-weight: 600; }
+h2 { font-size: 1.35em; color: var(--purple); font-weight: 600; }
+h3 { font-size: 1.1em;  color: var(--orange); font-weight: 600; }
+h4 { font-size: 1em;    color: var(--fg2);    font-weight: 600; }
+
+/* ── Body copy ──────────────────────────────────────────────── */
+p { margin: 0.9em 0; }
+
+a {
+  color: var(--purple);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(196,164,252,0.3);
+  transition: color 0.15s, border-color 0.15s;
+}
+a:hover { color: var(--cyan); border-color: var(--cyan); }
+
+strong { color: var(--fg); font-weight: 600; }
+em     { color: var(--fg2); }
+
+/* ── Code ───────────────────────────────────────────────────── */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg3);
+  color: var(--yellow);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+pre {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--purple);
+  border-radius: var(--radius-lg);
+  padding: 1.2em 1.4em;
+  overflow-x: auto;
+  margin: 1.4em 0;
+  line-height: 1.6;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--fg);
+  font-size: 0.88em;
+}
+
+/* ── Math ───────────────────────────────────────────────────── */
+.math.display {
+  display: block;
+  overflow-x: auto;
+  padding: 1em 0;
+  text-align: center;
+}
+
+/* MathJax sizing */
+mjx-container[display="true"] {
+  margin: 1.2em 0 !important;
+  overflow-x: auto;
+}
+
+/* ── Blockquote ─────────────────────────────────────────────── */
+blockquote {
+  margin: 1.4em 0;
+  padding: 0.8em 1.2em;
+  border-left: 3px solid var(--comment);
+  background: var(--bg2);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--fg2);
+  font-style: italic;
+}
+
+blockquote p { margin: 0; }
+
+/* ── Lists ──────────────────────────────────────────────────── */
+ul, ol {
+  padding-left: 1.6em;
+  margin: 0.8em 0;
+}
+
+li { margin: 0.3em 0; }
+
+li::marker { color: var(--comment); }
+
+/* ── Tables ─────────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.4em 0;
+  font-family: var(--font-ui);
+  font-size: 0.9em;
+}
+
+thead tr {
+  border-bottom: 2px solid var(--border2);
+}
+
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg3);
+}
+
+td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+}
+
+tbody tr:hover { background: var(--bg2); }
+
+td[style*="center"], th[style*="center"] { text-align: center; }
+
+/* ── Horizontal rule ────────────────────────────────────────── */
+hr {
+  border: none;
+  border-top: 1px solid var(--border2);
+  margin: 2.4em 0;
+}
+
+/* ── TOC ────────────────────────────────────────────────────── */
+#TOC {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: var(--toc-width);
+  height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 32px 16px 32px 20px;
+  overflow-y: auto;
+  font-family: var(--font-ui);
+  font-size: 0.8em;
+  z-index: 10;
+}
+
+#TOC::before {
+  content: 'Contents';
+  display: block;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--fg3);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+#TOC ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+#TOC ul ul {
+  padding-left: 12px;
+  margin-top: 2px;
+}
+
+#TOC li { margin: 0; }
+
+#TOC a {
+  display: block;
+  padding: 4px 8px;
+  color: var(--fg2);
+  border: none;
+  border-radius: 4px;
+  line-height: 1.4;
+  transition: background 0.12s, color 0.12s;
+}
+
+#TOC a:hover {
+  background: var(--bg4);
+  color: var(--purple);
+}
+
+#TOC ul ul a {
+  font-size: 0.95em;
+  color: var(--fg3);
+  padding: 3px 8px;
+}
+
+#TOC ul ul a:hover { color: var(--purple); }
+
+/* Scrollbar for TOC */
+#TOC::-webkit-scrollbar { width: 3px; }
+#TOC::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  #TOC {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 20px;
+    margin-bottom: 2em;
+  }
+
+  body {
+    padding: 24px 24px 64px;
+    max-width: 100%;
+  }
+}
+
+/* ── Scrollbar global ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border); }

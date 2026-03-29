@@ -1,0 +1,18 @@
+# Personal notes — never commit
+**/*.md
+**/*.html
+**/*.pdf
+**/*.png
+**/*.jpg
+
+# Keep these
+!README.md
+!LICENSE
+
+# System
+__pycache__/
+.DS_Store
+*.pyc
+
+# Logs
+server.log
