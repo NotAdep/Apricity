@@ -50,7 +50,7 @@ Two interfaces, one vault:
 
 ## Requirements
 
-- Linux, Windows or MacOS (tested on M4, should work on any Apple Silicon or Intel Mac)
+- macOS (tested on M4). Linux/Windows support planned.
 - Python 3.9+
 - [Pandoc](https://pandoc.org/installing.html)
 - A text editor (Vim/NeoVim recommended)
