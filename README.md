@@ -104,6 +104,7 @@ python3 vault.py
 | `o` | Open note in browser |
 | `b` | Open full vault in browser |
 | `l` | Link picker — jump to linked notes |
+| `p` | Opens PDFs attached to notes. If multiple, navigate and open
 | `Ctrl+D` / `Ctrl+U` | Scroll preview |
 | `/` | Full-text search |
 | `r` | Refresh |
@@ -195,8 +196,6 @@ VAULT = Path("/path/to/your/notes")
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
-
-Current version: **v1.2.0**
 
 ---
 
