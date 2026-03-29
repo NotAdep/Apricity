@@ -2,7 +2,7 @@
 """
 explore.py  —  Apricity / KnowledgeVault TUI
 ---------------------------------------------
-Build : 1.0.1
+Build : 1.2.0
 Requires vault.py to be running.
 
 Controls:
@@ -19,13 +19,14 @@ Controls:
   q           quit
 """
 
-BUILD = "1.1.4"
+BUILD = "1.2.0"
 
 import curses
 import json
 import os
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 import urllib.parse
@@ -76,21 +77,70 @@ def open_in_vim(md_path):
     os.system(f"vim '{full}'")
 
 
-def open_note_in_browser(note):
-    # Tell the viewer to switch to this note via SSE
+def is_browser_open():
+    """Check if the viewer is already open by seeing if any SSE clients are connected."""
     try:
-        md = note.get("md", "")
-        urllib.request.urlopen(
-            f"{API}/api/open-note?md={urllib.parse.quote(md)}", timeout=2
-        )
+        import vault as v
+        with v._clients_lock:
+            return len(v._clients) > 0
     except Exception:
-        pass
-    # Also open the browser if it isn't already open
-    subprocess.Popen(["open", API],
+        return False
+
+
+def focus_browser():
+    """Focus existing Firefox/Safari window without opening a new tab."""
+    script = '''
+tell application "System Events"
+    set browserRunning to false
+    if exists process "Firefox" then set browserRunning to true
+    if exists process "Safari" then set browserRunning to true
+    if browserRunning then
+        if exists process "Firefox" then
+            tell application "Firefox" to activate
+        else
+            tell application "Safari" to activate
+        end if
+    else
+        do shell script "open http://localhost:7777"
+    end if
+end tell
+'''
+    subprocess.Popen(["osascript", "-e", script],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def open_note_in_browser(note):
+    md = note.get("md", "")
+    browser_already_open = is_browser_open()
+
+    if browser_already_open:
+        # SSE clients connected — send open event directly
+        focus_browser()
+        time.sleep(0.1)
+        try:
+            urllib.request.urlopen(
+                f"{API}/api/open-note?md={urllib.parse.quote(md)}", timeout=2
+            )
+        except Exception:
+            pass
+    else:
+        # Browser not open — open it, wait for SSE connection, then send
+        subprocess.Popen(["open", API],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Wait for browser to load and connect to SSE stream
+        def delayed_open():
+            time.sleep(2)
+            try:
+                urllib.request.urlopen(
+                    f"{API}/api/open-note?md={urllib.parse.quote(md)}", timeout=2
+                )
+            except Exception:
+                pass
+        threading.Thread(target=delayed_open, daemon=True).start()
+
+
 def open_vault_in_browser():
+    focus_browser()
     subprocess.Popen(["open", API],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 

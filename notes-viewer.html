@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KnowledgeVault</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0f0f11;
+  --bg2:     #181820;
+  --bg3:     #1e1e28;
+  --bg4:     #252530;
+  --border:  #2e2e3a;
+  --border2: #3a3a48;
+  --fg:      #e8e8f0;
+  --fg2:     #a8a8b8;
+  --fg3:     #505060;
+  --purple:  #c4a4fc;
+  --green:   #4fd98e;
+  --cyan:    #79daf2;
+  --comment: #5c6080;
+  --ap:      rgba(196,164,252,0.1);
+  --font-ui: -apple-system, 'SF Pro Text', system-ui, sans-serif;
+  --font-mono: 'SF Mono','Fira Code',monospace;
+  --sidebar: 250px;
+  --r: 6px; --rl: 10px;
+}
+
+body { background:var(--bg); color:var(--fg); font-family:var(--font-ui); height:100vh; display:flex; overflow:hidden; }
+
+/* SIDEBAR */
+#sidebar { width:var(--sidebar); min-width:var(--sidebar); background:var(--bg2); border-right:1px solid var(--border); display:flex; flex-direction:column; height:100vh; }
+
+#sh { padding:13px 12px 10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+#ai { width:20px;height:20px;background:var(--purple);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#0f0f11;flex-shrink:0; }
+#app-title { font-size:13px;font-weight:600;color:var(--fg);flex:1; }
+
+#sw { padding:9px 9px 5px;position:relative; }
+#search { width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 8px 6px 26px;font-size:12px;color:var(--fg);font-family:var(--font-ui);outline:none;transition:border-color .15s; }
+#search::placeholder { color:var(--fg3); }
+#search:focus { border-color:var(--border2); }
+#si { position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--fg3);font-size:12px;pointer-events:none; }
+
+#sr { display:none;padding:0 7px 5px; }
+.sh2 { padding:5px 7px;border-radius:var(--r);cursor:pointer;font-size:12px; }
+.sh2:hover { background:var(--bg4); }
+.sh2 .ht { color:var(--fg);font-weight:500; }
+.sh2 .he { color:var(--fg2);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.sh2 mark { background:rgba(196,164,252,.18);color:var(--purple);border-radius:2px; }
+
+#fl { flex:1;overflow-y:auto;padding:4px 7px 8px; }
+#fl::-webkit-scrollbar { width:3px; }
+#fl::-webkit-scrollbar-thumb { background:var(--bg4);border-radius:2px; }
+
+.subject-label {
+  font-size:10px;font-weight:600;color:var(--fg3);letter-spacing:.8px;
+  text-transform:uppercase;padding:10px 8px 3px;
+  display:flex;align-items:center;gap:5px;
+}
+.subject-label span { flex:1; }
+
+.fi { padding:5px 7px;border-radius:var(--r);cursor:pointer;font-size:12.5px;color:var(--fg2);display:flex;align-items:baseline;gap:6px;transition:background .1s,color .1s; }
+.fi:hover { background:var(--bg3);color:var(--fg); }
+.fi.active { background:var(--ap);color:var(--purple); }
+.fd { width:4px;height:4px;border-radius:50%;background:var(--fg3);flex-shrink:0;margin-top:5px;transition:background .1s; }
+.fi.active .fd { background:var(--purple); }
+.fn { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1; }
+.fdate { font-size:10px;color:var(--fg3);white-space:nowrap;font-family:var(--font-mono); }
+
+#sf { border-top:1px solid var(--border);padding:9px 9px;display:flex;gap:5px; }
+.tb { flex:1;padding:6px 4px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--fg2);font-size:11px;font-family:var(--font-ui);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:5px; }
+.tb:hover { background:var(--bg3);color:var(--fg); }
+.tb.active { background:var(--ap);border-color:rgba(196,164,252,.3);color:var(--purple); }
+
+/* MAIN */
+#main { flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0; }
+#tb2 { height:40px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;background:var(--bg);flex-shrink:0; }
+#bc { font-size:12px;color:var(--fg3);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+#bc .subj { color:var(--fg3); }
+#bc .nn { color:var(--fg2); }
+#bc .na { color:var(--comment); }
+
+.xb { padding:3px 9px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--fg3);font-size:11px;font-family:var(--font-ui);cursor:pointer;transition:all .12s;white-space:nowrap; }
+.xb:hover { background:var(--bg3);color:var(--fg2);border-color:var(--border2); }
+.xb.highlight { border-color:rgba(196,164,252,.4);color:var(--purple); }
+.xb.highlight:hover { background:var(--ap); }
+
+/* reload flash */
+@keyframes flash { 0%{opacity:1} 50%{opacity:.3} 100%{opacity:1} }
+.reloading { animation: flash .4s ease; }
+
+#reload-badge {
+  display:none;
+  position:absolute;top:8px;right:12px;
+  background:var(--green);
+  color:#0f0f11;
+  font-size:10px;font-weight:600;
+  padding:2px 7px;border-radius:100px;
+  z-index:10;
+}
+#reload-badge.show { display:block; }
+
+#ca { flex:1;overflow:hidden;position:relative; }
+.view { display:none;width:100%;height:100%; }
+.view.active { display:flex;flex-direction:column; }
+#view-note { background:var(--bg); }
+#nf { flex:1;border:none;width:100%;background:var(--bg); }
+
+/* graph */
+#view-graph { position:relative;background:var(--bg); }
+#gc { width:100%;height:100%;display:block;cursor:grab; }
+#gc:active { cursor:grabbing; }
+#gh { position:absolute;bottom:13px;left:13px;font-size:11px;color:var(--fg3);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:5px 9px;pointer-events:none; }
+#gt { position:absolute;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:4px 9px;font-size:12px;color:var(--fg);pointer-events:none;display:none;z-index:10; }
+
+/* empty state */
+#ds { display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--fg3);font-size:13px;text-align:center;line-height:1.7; }
+#ds .gl { font-size:38px;color:var(--border2);line-height:1;font-family:serif; }
+#ds code { background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-family:var(--font-mono);font-size:12px;color:var(--fg2); }
+
+/* server status dot */
+#status { width:6px;height:6px;border-radius:50%;background:var(--fg3);flex-shrink:0;transition:background .3s; }
+#status.online { background:var(--green); }
+#status.offline { background:#ff6e6e; }
+
+::-webkit-scrollbar { width:4px;height:4px; }
+::-webkit-scrollbar-thumb { background:var(--bg4);border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div id="sh">
+    <div id="ai">K</div>
+    <span id="app-title">KnowledgeVault</span>
+    <div id="status" title="Server status"></div>
+  </div>
+  <div id="sw">
+    <span id="si">⌕</span>
+    <input type="text" id="search" placeholder="Search notes…" autocomplete="off" spellcheck="false">
+  </div>
+  <div id="sr"></div>
+  <div id="fl"><div style="padding:16px 8px;font-size:12px;color:var(--fg3)">Connecting to server…</div></div>
+  <div id="sf">
+    <button class="tb active" id="btn-note-view">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor"><rect y="0" width="11" height="1.5" rx=".75"/><rect y="3" width="8" height="1.5" rx=".75"/><rect y="6" width="9.5" height="1.5" rx=".75"/><rect y="9" width="6" height="1.5" rx=".75"/></svg>
+      Notes
+    </button>
+    <button class="tb" id="btn-graph-view">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="2" fill="currentColor"/><circle cx="1.5" cy="1.5" r="1.3" fill="currentColor" opacity=".5"/><circle cx="9.5" cy="1.5" r="1.3" fill="currentColor" opacity=".5"/><circle cx="1.5" cy="9.5" r="1.3" fill="currentColor" opacity=".5"/><circle cx="9.5" cy="9.5" r="1.3" fill="currentColor" opacity=".5"/><line x1="3.5" y1="3.5" x2="1.5" y2="1.5" stroke="currentColor" stroke-width=".8" opacity=".35"/><line x1="7.5" y1="3.5" x2="9.5" y2="1.5" stroke="currentColor" stroke-width=".8" opacity=".35"/><line x1="3.5" y1="7.5" x2="1.5" y2="9.5" stroke="currentColor" stroke-width=".8" opacity=".35"/><line x1="7.5" y1="7.5" x2="9.5" y2="9.5" stroke="currentColor" stroke-width=".8" opacity=".35"/></svg>
+      Graph
+    </button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="tb2">
+    <div id="bc">KnowledgeVault</div>
+    <div id="reload-badge">↺ reloaded</div>
+    <button class="xb" id="btn-vim" style="display:none">Open in Vim</button>
+    <button class="xb" id="btn-reload">↺</button>
+  </div>
+  <div id="ca">
+    <div class="view active" id="view-note">
+      <div id="ds">
+        <div class="gl">∿</div>
+        <div>Start the server, then select a note.<br>
+        <code>python3 notes-server.py</code></div>
+      </div>
+      <iframe id="nf" style="display:none" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+    <div class="view" id="view-graph">
+      <canvas id="gc"></canvas>
+      <div id="gt"></div>
+      <div id="gh">scroll to zoom · drag to pan · click to open</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:7777';
+let allNotes = [];   // flat list of all note objects from server
+let activeNote = null;
+let curView = 'note';
+let graph = { nodes:[], edges:[], transform:{x:0,y:0,scale:1} };
+let dragNode=null, dragOff=null, panStart=null, isPan=false, animFr=null;
+
+// ── Server connection ──────────────────────────────────────────
+// ── Server health check ────────────────────────────────────────
+async function checkServer() {
+  try {
+    const res = await fetch(`${API}/api/tree`, { signal: AbortSignal.timeout(2000) });
+    if (res.ok) {
+      document.getElementById('status').className = 'online';
+      return true;
+    }
+  } catch(e) {}
+  document.getElementById('status').className = 'offline';
+  document.getElementById('fl').innerHTML =
+    `<div style="padding:14px 8px;font-size:12px;color:#ff6e6e;line-height:1.6">
+      Server offline.<br>
+      <span style="color:var(--fg3)">Run:</span><br>
+      <code style="font-family:var(--font-mono);font-size:11px;color:var(--fg2)">python3 notes-server.py</code>
+    </div>`;
+  return false;
+}
+
+// Ping every 3 seconds to keep status dot accurate
+setInterval(async () => {
+  const alive = await checkServer();
+  if (alive && allNotes.length === 0) loadTree();
+}, 3000);
+
+async function loadTree() {
+  try {
+    const res = await fetch(`${API}/api/tree`);
+    if (!res.ok) throw new Error();
+    const tree = await res.json();
+    allNotes = tree.flatMap(s => s.notes);
+    renderSidebar(tree);
+    document.getElementById('status').className = 'online';
+    // Open first note automatically
+    if (allNotes.length > 0 && !activeNote) openNote(allNotes[0]);
+  } catch(e) {
+    document.getElementById('status').className = 'offline';
+    document.getElementById('fl').innerHTML =
+      `<div style="padding:14px 8px;font-size:12px;color:#ff6e6e;line-height:1.6">
+        Server offline.<br>
+        <span style="color:var(--fg3)">Run:</span><br>
+        <code style="font-family:var(--font-mono);font-size:11px;color:var(--fg2)">python3 notes-server.py</code>
+      </div>`;
+    setTimeout(loadTree, 2000); // retry
+  }
+}
+
+// ── Auto-reload via SSE ────────────────────────────────────────
+function connectReloadStream() {
+  const es = new EventSource(`${API}/api/reload-stream`);
+  es.onmessage = e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.open) {
+        // TUI asked us to open a specific note
+        const note = allNotes.find(n => n.md === data.open);
+        if (note) openNote(note);
+      } else if (activeNote && data.path === activeNote.html) {
+        // File changed — reload current note
+        reloadCurrentNote();
+      }
+    } catch(err) {}
+  };
+  es.onerror = () => {
+    es.close();
+    setTimeout(connectReloadStream, 3000);
+  };
+}
+
+function reloadCurrentNote() {
+  if (!activeNote) return;
+  const iframe = document.getElementById('nf');
+  // Bust cache with timestamp
+  iframe.src = `${API}/${activeNote.html}?t=${Date.now()}`;
+  // Show badge briefly
+  const badge = document.getElementById('reload-badge');
+  badge.classList.add('show');
+  setTimeout(() => badge.classList.remove('show'), 1800);
+  iframe.onload = () => wireIframeLinks(iframe);
+}
+
+// ── Sidebar ────────────────────────────────────────────────────
+function renderSidebar(tree, filter='') {
+  const fl = document.getElementById('fl');
+  if (!tree || tree.length === 0) {
+    fl.innerHTML = `<div style="padding:14px 8px;font-size:12px;color:var(--fg3)">No notes found in ~/KnowledgeVault</div>`;
+    return;
+  }
+
+  let html = '';
+  for (const subject of tree) {
+    const notes = filter
+      ? subject.notes.filter(n => n.title.toLowerCase().includes(filter) || n.subject.toLowerCase().includes(filter))
+      : subject.notes;
+
+    html += `<div class="subject-label"><span>${subject.subject}</span></div>`;
+    if (!notes.length) {
+      html += `<div style="padding:3px 8px 6px 20px;font-size:11px;color:var(--fg3);font-style:italic">empty</div>`;
+      continue;
+    }
+    for (const note of notes) {
+      const isActive = activeNote && activeNote.md === note.md;
+      html += `<div class="fi ${isActive?'active':''}" onclick="openNoteById('${note.md}')">
+        <span class="fd"></span>
+        <span class="fn">${note.title}</span>
+        ${note.date ? `<span class="fdate">${note.date}</span>` : ''}
+      </div>`;
+    }
+  }
+  fl.innerHTML = html;
+}
+
+// ── Open note ──────────────────────────────────────────────────
+function openNoteById(md) {
+  const note = allNotes.find(n => n.md === md);
+  if (note) openNote(note);
+}
+
+function openNote(note) {
+  activeNote = note;
+
+  // Topbar
+  const auth = note.author ? ` · <span class="na">${note.author}</span>` : '';
+  const date = note.date ? ` <span style="color:var(--fg3);font-size:11px">${note.date}</span>` : '';
+  document.getElementById('bc').innerHTML =
+    `<span class="subj">${note.subject}</span> / <span class="nn">${note.title}</span>${auth}${date}`;
+
+  // Show Vim button
+  const vimBtn = document.getElementById('btn-vim');
+  vimBtn.style.display = 'block';
+  vimBtn.classList.add('highlight');
+  vimBtn.onclick = () => openInVim(note.md);
+
+  // Load iframe
+  const iframe = document.getElementById('nf');
+  const ds = document.getElementById('ds');
+  ds.style.display = 'none';
+  iframe.style.display = 'block';
+
+  if (note.html) {
+    iframe.removeAttribute('srcdoc');
+    iframe.src = `${API}/${note.html}?t=${Date.now()}`;
+    iframe.onload = () => wireIframeLinks(iframe);
+  } else {
+    iframe.removeAttribute('src');
+    iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+      <link rel="stylesheet" href="${API}/style.css">
+      </head><body style="padding:40px">
+      <p style="color:#ff6e6e;font-family:sans-serif">
+        No HTML found for this note. Open in Vim and press <strong>,c</strong> to compile it.
+      </p></body></html>`;
+  }
+
+  switchView('note');
+
+  // Re-render sidebar to update active state
+  fetch(`${API}/api/tree`).then(r=>r.json()).then(tree => {
+    renderSidebar(tree, document.getElementById('search').value.trim().toLowerCase());
+  }).catch(()=>{});
+
+  if (curView === 'graph') drawGraph();
+}
+
+function wireIframeLinks(iframe) {
+  try {
+    const doc = iframe.contentDocument;
+    doc.querySelectorAll('a[href]').forEach(a => {
+      const h = a.getAttribute('href');
+      if (!h || h.startsWith('http')||h.startsWith('//')||h.startsWith('mailto')||h.startsWith('#')) return;
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        // Resolve relative link to a note
+        const stem = h.replace(/\.html?$|\.md$/,'').replace(/^.*\//,'').toLowerCase();
+        const target = allNotes.find(n =>
+          n.id.toLowerCase() === stem ||
+          n.title.toLowerCase().replace(/\s+/g,'-') === stem
+        );
+        if (target) openNote(target);
+      });
+    });
+  } catch(e) {}
+}
+
+// ── Open in Vim ────────────────────────────────────────────────
+async function openInVim(mdPath) {
+  try {
+    await fetch(`${API}/api/open?file=${encodeURIComponent(mdPath)}`);
+  } catch(e) {
+    alert('Server not running. Start it with: python3 notes-server.py');
+  }
+}
+
+// ── Search ─────────────────────────────────────────────────────
+const sel = document.getElementById('search');
+const srd = document.getElementById('sr');
+
+let searchTimer = null;
+sel.addEventListener('input', () => {
+  const q = sel.value.trim();
+  if (!q) {
+    srd.style.display = 'none';
+    fetch(`${API}/api/tree`).then(r=>r.json()).then(t=>renderSidebar(t)).catch(()=>{});
+    return;
+  }
+  // Debounce 250ms so we don't fire on every keystroke
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch(`${API}/api/search?q=${encodeURIComponent(q)}`);
+      const hits = await res.json();
+      srd.style.display = 'block';
+      const hl = s => s.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'), m=>`<mark>${m}</mark>`);
+      srd.innerHTML = hits.length
+        ? hits.map(n => `
+          <div class="sh2" onclick="openNoteById('${n.md}');srd.style.display='none';sel.value=''">
+            <div class="ht">${hl(n.title)}</div>
+            ${n.excerpt ? `<div class="he">${hl(n.excerpt)}</div>` : ''}
+            <div class="he" style="color:var(--fg3);font-size:10px">${n.subject}</div>
+          </div>`).join('')
+        : `<div class="sh2" style="color:var(--fg3);pointer-events:none">No results</div>`;
+    } catch(e) {
+      srd.style.display = 'none';
+    }
+  }, 250);
+});
+
+// ── Buttons ────────────────────────────────────────────────────
+document.getElementById('btn-reload').addEventListener('click', () => {
+  if (activeNote) reloadCurrentNote();
+});
+document.getElementById('btn-note-view').addEventListener('click', () => switchView('note'));
+document.getElementById('btn-graph-view').addEventListener('click', () => switchView('graph'));
+
+// ── View switch ────────────────────────────────────────────────
+function switchView(v) {
+  curView = v;
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tb').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`view-${v}`).classList.add('active');
+  document.getElementById(`btn-${v}-view`).classList.add('active');
+  if (v==='graph') setTimeout(initGraph, 40);
+}
+
+// ── GRAPH ──────────────────────────────────────────────────────
+function buildGD() {
+  const nm = {};
+  allNotes.forEach(n => { nm[n.id] = {id:n.id,title:n.title,subject:n.subject,x:0,y:0,vx:0,vy:0,conn:0}; });
+  // For graph edges we'd need to parse markdown content — approximate by subject grouping
+  const edges = [];
+  // Group notes in same subject as loosely connected
+  const bySubject = {};
+  allNotes.forEach(n => { (bySubject[n.subject]||=[]).push(n.id); });
+  Object.values(bySubject).forEach(ids => {
+    for (let i=0;i<ids.length-1;i++) {
+      edges.push({s:ids[i],t:ids[i+1]});
+      nm[ids[i]].conn++; nm[ids[i+1]].conn++;
+    }
+  });
+  return {nodes:Object.values(nm),edges};
+}
+
+function initGraph() {
+  const canvas=document.getElementById('gc');
+  const cont=document.getElementById('view-graph');
+  canvas.width=cont.clientWidth; canvas.height=cont.clientHeight;
+  const cx=canvas.width/2, cy=canvas.height/2;
+  const gd=buildGD();
+  gd.nodes.forEach(n=>{n.x=cx+(Math.random()-.5)*320;n.y=cy+(Math.random()-.5)*260;});
+  graph={...gd,transform:{x:0,y:0,scale:1}};
+  if(animFr) cancelAnimationFrame(animFr);
+  let i=0;
+  (function tick(){
+    if(i<240){layout();i++;} drawGraph();
+    animFr=requestAnimationFrame(tick);
+    if(i>=240&&!dragNode&&!isPan) cancelAnimationFrame(animFr);
+  })();
+}
+
+function layout() {
+  const ns=graph.nodes,k=90;
+  ns.forEach(a=>{ns.forEach(b=>{
+    if(a.id===b.id)return;
+    const dx=a.x-b.x,dy=a.y-b.y,d=Math.max(Math.hypot(dx,dy),1),f=k*k/d;
+    a.vx+=dx/d*f*.05;a.vy+=dy/d*f*.05;
+  });});
+  graph.edges.forEach(e=>{
+    const a=graph.nodes.find(n=>n.id===e.s),b=graph.nodes.find(n=>n.id===e.t);
+    if(!a||!b)return;
+    const dx=b.x-a.x,dy=b.y-a.y,d=Math.max(Math.hypot(dx,dy),1),f=(d-k*1.1)*.05;
+    a.vx+=dx/d*f;a.vy+=dy/d*f;b.vx-=dx/d*f;b.vy-=dy/d*f;
+  });
+  const cv=document.getElementById('gc');
+  ns.forEach(n=>{
+    n.vx+=(cv.width/2-n.x)*.007;n.vy+=(cv.height/2-n.y)*.007;
+    n.vx*=.75;n.vy*=.75;n.x+=n.vx;n.y+=n.vy;
+  });
+}
+
+function drawGraph() {
+  const cv=document.getElementById('gc'),ctx=cv.getContext('2d');
+  const {x,y,scale}=graph.transform;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+
+  // Subject cluster labels
+  const subjectCenters = {};
+  graph.nodes.forEach(n=>{
+    if(!subjectCenters[n.subject]) subjectCenters[n.subject]={x:0,y:0,c:0};
+    subjectCenters[n.subject].x+=n.x;
+    subjectCenters[n.subject].y+=n.y;
+    subjectCenters[n.subject].c++;
+  });
+
+  graph.edges.forEach(e=>{
+    const a=graph.nodes.find(n=>n.id===e.s),b=graph.nodes.find(n=>n.id===e.t);
+    if(!a||!b)return;
+    const hot=activeNote&&(a.id===activeNote.id||b.id===activeNote.id);
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle=hot?'rgba(196,164,252,.5)':'rgba(255,255,255,.05)';
+    ctx.lineWidth=hot?1.5:.8;ctx.stroke();
+  });
+
+  graph.nodes.forEach(n=>{
+    const r=5+Math.min(n.conn*3,12);
+    const isA=activeNote&&n.id===activeNote.id;
+    ctx.beginPath();ctx.arc(n.x,n.y,r,0,Math.PI*2);
+    ctx.fillStyle=isA?'#c4a4fc':n.conn>0?'rgba(196,164,252,.38)':'rgba(255,255,255,.14)';
+    ctx.fill();
+    if(isA){ctx.beginPath();ctx.arc(n.x,n.y,r+3,0,Math.PI*2);ctx.strokeStyle='rgba(196,164,252,.22)';ctx.lineWidth=1.5;ctx.stroke();}
+    ctx.fillStyle=isA?'#e8e8f0':'rgba(168,168,184,.75)';
+    ctx.font=`${isA?'500 ':''}11.5px -apple-system,system-ui,sans-serif`;
+    ctx.textAlign='center';
+    const lbl=n.title.length>22?n.title.slice(0,20)+'…':n.title;
+    ctx.fillText(lbl,n.x,n.y+r+13);
+  });
+
+  // Draw subject labels at cluster centers
+  Object.entries(subjectCenters).forEach(([subj,c])=>{
+    if(c.c===0)return;
+    ctx.fillStyle='rgba(80,80,96,.6)';
+    ctx.font='600 10px -apple-system,system-ui,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(subj.toUpperCase(),c.x/c.c,c.y/c.c-22);
+  });
+
+  ctx.restore();
+}
+
+const gc2=document.getElementById('gc');
+gc2.addEventListener('mousedown',e=>{
+  const p=cpos(e),hit=hnode(p.x,p.y);
+  if(hit){dragNode=hit;dragOff={x:e.clientX-hit.x,y:e.clientY-hit.y};}
+  else{isPan=true;panStart={mx:e.clientX,my:e.clientY,tx:graph.transform.x,ty:graph.transform.y};}
+});
+gc2.addEventListener('mousemove',e=>{
+  if(dragNode){dragNode.x=e.clientX-dragOff.x;dragNode.y=e.clientY-dragOff.y;drawGraph();}
+  else if(isPan&&panStart){graph.transform.x=panStart.tx+(e.clientX-panStart.mx);graph.transform.y=panStart.ty+(e.clientY-panStart.my);drawGraph();}
+  const p=cpos(e),hit=hnode(p.x,p.y);
+  const tt=document.getElementById('gt');
+  if(hit){tt.style.display='block';tt.style.left=(e.clientX+13)+'px';tt.style.top=(e.clientY-26)+'px';tt.textContent=`${hit.subject} / ${hit.title}`;gc2.style.cursor='pointer';}
+  else{tt.style.display='none';gc2.style.cursor=isPan?'grabbing':'grab';}
+});
+gc2.addEventListener('mouseup',()=>{if(dragNode){dragNode=null;dragOff=null;}if(isPan){isPan=false;panStart=null;}});
+gc2.addEventListener('click',e=>{
+  const p=cpos(e),hit=hnode(p.x,p.y);
+  if(hit){const n=allNotes.find(n=>n.id===hit.id);if(n)openNote(n);}
+});
+gc2.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f=e.deltaY>0?.88:1.13,r=gc2.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  graph.transform.x=mx-(mx-graph.transform.x)*f;
+  graph.transform.y=my-(my-graph.transform.y)*f;
+  graph.transform.scale=Math.max(.15,Math.min(5,graph.transform.scale*f));
+  drawGraph();
+},{passive:false});
+function cpos(e){const r=gc2.getBoundingClientRect();return{x:(e.clientX-r.left-graph.transform.x)/graph.transform.scale,y:(e.clientY-r.top-graph.transform.y)/graph.transform.scale};}
+function hnode(x,y){return graph.nodes.find(n=>Math.hypot(n.x-x,n.y-y)<5+Math.min(n.conn*3,12)+6);}
+
+// ── Init ───────────────────────────────────────────────────────
+loadTree();
+connectReloadStream();
+</script>
+</body>
+</html>
