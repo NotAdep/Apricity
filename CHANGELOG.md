@@ -6,6 +6,21 @@ date:29/03/2026
 # Apricity — Changelog
 ---
 
+## v1.3.0 - 29/03/2026
+
+### Features
+- **Opening PDF files from Terminal and in-Browser** - Once any PDF
+  is linked, it can be opened using any PDF viewer by clicking `p`.
+  In case of multiple PDFs, navigate using `j` and `k` and open.
+  In case of Browser, PDFs open in the same window and saving resources.
+
+### Files changed
+- `Apricity.py` - Added new `p` key feature to open PDFs
+- `notes-viewer.html` - Added ability to open PDFs within the same window
+  BUILD bumped 1.2.0 - 1.3.0
+
+---
+
 ## v1.2.0 — 29/03/2026
 
 ### Bug Fixes
