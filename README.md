@@ -3,7 +3,7 @@
 > *apricity (n.)* — the warmth of the sun in winter.
 
 A private, offline, self-hosted knowledge system built around
-**Vim + Markdown + Pandoc**. Apricity adds a browser viewer and a
+**Vim + Markdown + Pandoc + LaTeX**. Apricity adds a browser viewer and a
 terminal TUI on top of your existing plain-text workflow — without
 changing anything about how you write.
 
@@ -12,19 +12,19 @@ changing anything about how you write.
 ## What it looks like
 
 ```
-┌─ Apricity  v1.1.4 ──────────────────────────────────────────────┐
-│ ▸ Backup (empty)                                                 │
-│ ▾ Numerical_Analysis (3)                                         │
-│     Matrix Product                          21/03/2026           │
-│   ▶ Polynomial Interpolation                21/03/2026           │
-│     Numerical Analysis Experiment                                │
-│ ▸ ODEs (empty)                                                   │
-│ ▾ Vault (2)                                                      │
-│     CHANGELOG                                                    │
-│     Apricity — Help                         21/03/2026           │
-│                                                                  │
+┌─ Apricity  v1.x.x ──────────────────────────────────────────────┐
+│ ▸ Backup (empty)                                                │
+│ ▾ Numerical_Analysis (3)                                        │
+│     Matrix Product                          21/03/2026          │
+│   ▶ Polynomial Interpolation                21/03/2026          │
+│     Numerical Analysis Experiment                               │
+│ ▸ ODEs (empty)                                                  │
+│ ▾ Vault (2)                                                     │
+│     CHANGELOG                                                   │
+│     Apricity — Help                         21/03/2026          │
+│                                                                 │
 │  ● running  ·  6 notes  ·  21/03/2026                           │
-└──────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 Two interfaces, one vault:
@@ -50,19 +50,20 @@ Two interfaces, one vault:
 
 ## Requirements
 
-- macOS (tested on M4, should work on any Apple Silicon or Intel Mac)
+- Linux, Windows or MacOS (tested on M4, should work on any Apple Silicon or Intel Mac)
 - Python 3.9+
 - [Pandoc](https://pandoc.org/installing.html)
-- A text editor (Vim recommended)
-- For PDF export: [BasicTeX](https://www.tug.org/mactex/morepackages.html)
+- A text editor (Vim/NeoVim recommended)
+- For PDF export: LaTeX, specifically xelatex. I have used [BasicTeX](https://www.tug.org/interest.html#free)
+- Any Modern Browser
 
 ---
 
 ## Installation
 
 ```bash
-git clone https://github.com/YOURUSERNAME/apricity.git
-cd apricity
+git clone https://github.com/NotAdep/Apricity.git
+cd Apricity
 ```
 
 Open `vault.py` and set your vault path:
@@ -80,7 +81,7 @@ That's it. No virtual environments, no package managers.
 ### Start everything
 
 ```bash
-python3 explore.py
+python3 Apricity.py
 ```
 
 The splash screen plays, the server starts in the background, and the
@@ -127,8 +128,8 @@ Apricity expects one level of folders inside your vault:
 
 ```
 ~/KnowledgeVault/
+  Apricity.py
   vault.py
-  explore.py
   notes-viewer.html
   style.css
   Mathematics/
@@ -195,13 +196,13 @@ VAULT = Path("/path/to/your/notes")
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v1.1.4**
+Current version: **v1.2.0**
 
 ---
 
 ## License
 
-MIT License — Copyright (c) 2026 Adhip Srivastava
+MIT License — Copyright (c) 2026 NotAdep
 
 See [LICENSE](LICENSE) for the full text.
 
