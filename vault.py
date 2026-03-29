@@ -165,8 +165,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(data)
+        except BrokenPipeError:
+            pass  # client closed connection — harmless
         except Exception as e:
-            self.send_error(500, str(e))
+            try:
+                self.send_error(500, str(e))
+            except BrokenPipeError:
+                pass
+
+    def handle_error(self, request, client_address):
+        pass  # suppress all connection errors from terminal output
 
 
 # ── Full text search ───────────────────────────────────────────
@@ -301,7 +309,7 @@ def guess_mime(path: Path) -> str:
     }.get(ext, "application/octet-stream")
 
 
-# ── Module API (used by Apricity.py) ───────────────────────────
+# ── Module API (used by explore.py) ───────────────────────────
 _server_instance = None
 
 def start_server():
