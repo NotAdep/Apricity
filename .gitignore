@@ -5,7 +5,9 @@
 **/*.png
 **/*.jpg
 
-# Keep these
+# Exceptions — these ARE part of the project
+!notes-viewer.html
+!CHANGELOG.md
 !README.md
 !LICENSE
 
