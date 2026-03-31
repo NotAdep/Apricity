@@ -16,7 +16,7 @@ Controls:
   q           quit
 """
 
-BUILD = "1.3.0"
+BUILD = "1.4.0"
 
 import curses
 import json
@@ -397,13 +397,12 @@ def draw_preview(win, item, server_ok, rg_matches=None, preview_scroll=0):
 
 # ── PDF helpers ────────────────────────────────────────────────
 def extract_pdfs_from_note(md_path):
-    """Find all PDF links in a note, plus any PDFs in the same folder."""
+    """Find only PDF files explicitly linked in the note."""
     import re
     vault_dir = os.path.expanduser("~/KnowledgeVault")
     folder    = os.path.dirname(os.path.join(vault_dir, md_path))
     pdfs      = []
 
-    # Parse PDF links from markdown
     try:
         full = os.path.join(vault_dir, md_path)
         with open(full, 'r', encoding='utf-8', errors='ignore') as f:
@@ -413,16 +412,6 @@ def extract_pdfs_from_note(md_path):
             pdf_path = os.path.join(folder, pdf_name)
             if os.path.exists(pdf_path):
                 pdfs.append((m.group(1), pdf_path))
-    except Exception:
-        pass
-
-    # Also find any PDFs sitting in the same folder
-    try:
-        for f in sorted(os.listdir(folder)):
-            if f.lower().endswith('.pdf'):
-                full_path = os.path.join(folder, f)
-                if not any(p == full_path for _, p in pdfs):
-                    pdfs.append((f, full_path))
     except Exception:
         pass
 
@@ -468,24 +457,34 @@ def py_search(query):
 
 # ── Extract links from a note ──────────────────────────────────
 def extract_links_from_note(md_path):
+    """
+    Parse [[wikilinks]] and [text](file.html) from a note.
+    Returns list of display titles that can be resolved across all subjects.
+    """
     import re
     vault_dir = os.path.expanduser("~/KnowledgeVault")
-    full  = os.path.join(vault_dir, md_path)
-    links = []
+    full      = os.path.join(vault_dir, md_path)
+    links     = []
     try:
         with open(full, 'r', encoding='utf-8', errors='ignore') as f:
             text = f.read()
-        for m in re.finditer(r'\[\[([^\]]+)\]\]', text):
-            links.append(m.group(1))
+        # [[wikilinks]] — use the title as-is for cross-subject resolution
+        for m in re.finditer(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]', text):
+            links.append(m.group(1).strip())
+        # [text](file.html or file.md) — use filename stem
         for m in re.finditer(r'\[([^\]]+)\]\(([^)]+\.(?:html?|md))\)', text):
             target = re.sub(r'\.html?$|\.md$', '', m.group(2))
-            links.append(target.split('/')[-1])
+            # Use display text if it looks like a title, else stem
+            display = m.group(1)
+            links.append(display)
     except Exception:
         pass
+    # Deduplicate preserving order
     seen, result = set(), []
     for l in links:
         if l.lower() not in seen:
-            seen.add(l.lower()); result.append(l)
+            seen.add(l.lower())
+            result.append(l)
     return result
 
 
