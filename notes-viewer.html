@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KnowledgeVault</title>
+<title>Apricity</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -133,8 +133,8 @@ body { background:var(--bg); color:var(--fg); font-family:var(--font-ui); height
 
 <div id="sidebar">
   <div id="sh">
-    <div id="ai">K</div>
-    <span id="app-title">KnowledgeVault</span>
+    <div id="ai">A</div>
+    <span id="app-title">Apricity</span>
     <div id="status" title="Server status"></div>
   </div>
   <div id="sw">
@@ -157,7 +157,7 @@ body { background:var(--bg); color:var(--fg); font-family:var(--font-ui); height
 
 <div id="main">
   <div id="tb2">
-    <div id="bc">KnowledgeVault</div>
+    <div id="bc">Apricity</div>
     <div id="reload-badge">↺ reloaded</div>
     <button class="xb" id="btn-vim" style="display:none">Open in Vim</button>
     <button class="xb" id="btn-reload">↺</button>
@@ -273,7 +273,7 @@ function reloadCurrentNote() {
 function renderSidebar(tree, filter='') {
   const fl = document.getElementById('fl');
   if (!tree || tree.length === 0) {
-    fl.innerHTML = `<div style="padding:14px 8px;font-size:12px;color:var(--fg3)">No notes found in ~/KnowledgeVault</div>`;
+    fl.innerHTML = `<div style="padding:14px 8px;font-size:12px;color:var(--fg3)">No notes found in ~/Apricity</div>`;
     return;
   }
 
@@ -434,59 +434,93 @@ function switchView(v) {
 }
 
 // ── GRAPH ──────────────────────────────────────────────────────
-function buildGD() {
-  const nm = {};
-  allNotes.forEach(n => { nm[n.id] = {id:n.id,title:n.title,subject:n.subject,x:0,y:0,vx:0,vy:0,conn:0}; });
-  // For graph edges we'd need to parse markdown content — approximate by subject grouping
-  const edges = [];
-  // Group notes in same subject as loosely connected
-  const bySubject = {};
-  allNotes.forEach(n => { (bySubject[n.subject]||=[]).push(n.id); });
-  Object.values(bySubject).forEach(ids => {
-    for (let i=0;i<ids.length-1;i++) {
-      edges.push({s:ids[i],t:ids[i+1]});
-      nm[ids[i]].conn++; nm[ids[i+1]].conn++;
-    }
-  });
-  return {nodes:Object.values(nm),edges};
-}
+async function initGraph() {
+  const canvas = document.getElementById('gc');
+  const cont   = document.getElementById('view-graph');
+  canvas.width  = cont.clientWidth;
+  canvas.height = cont.clientHeight;
+  const cx = canvas.width / 2, cy = canvas.height / 2;
 
-function initGraph() {
-  const canvas=document.getElementById('gc');
-  const cont=document.getElementById('view-graph');
-  canvas.width=cont.clientWidth; canvas.height=cont.clientHeight;
-  const cx=canvas.width/2, cy=canvas.height/2;
-  const gd=buildGD();
-  gd.nodes.forEach(n=>{n.x=cx+(Math.random()-.5)*320;n.y=cy+(Math.random()-.5)*260;});
-  graph={...gd,transform:{x:0,y:0,scale:1}};
-  if(animFr) cancelAnimationFrame(animFr);
-  let i=0;
-  (function tick(){
-    if(i<240){layout();i++;} drawGraph();
-    animFr=requestAnimationFrame(tick);
-    if(i>=240&&!dragNode&&!isPan) cancelAnimationFrame(animFr);
+  // Fetch real graph data from server
+  let gd = { nodes: [], edges: [] };
+  try {
+    const res = await fetch(`${API}/api/graph`);
+    const raw = await res.json();
+
+    // Build node map with positions
+    const nm = {};
+    raw.nodes.forEach(n => {
+      nm[n.id] = {
+        id: n.id, title: n.title, subject: n.subject,
+        md: n.md, html: n.html,
+        x: cx + (Math.random() - .5) * 320,
+        y: cy + (Math.random() - .5) * 260,
+        vx: 0, vy: 0, conn: 0
+      };
+    });
+
+    // Build edges and count connections
+    const edges = [];
+    raw.edges.forEach(e => {
+      if (nm[e.source] && nm[e.target]) {
+        edges.push({ s: e.source, t: e.target });
+        nm[e.source].conn++;
+        nm[e.target].conn++;
+      }
+    });
+
+    gd = { nodes: Object.values(nm), edges };
+  } catch(err) {
+    // Fallback to subject grouping if API fails
+    const nm = {};
+    allNotes.forEach(n => { nm[n.id] = {id:n.id,title:n.title,subject:n.subject,
+      md:n.md,html:n.html,x:cx+(Math.random()-.5)*320,y:cy+(Math.random()-.5)*260,
+      vx:0,vy:0,conn:0}; });
+    const edges = [];
+    const bySubject = {};
+    allNotes.forEach(n => { (bySubject[n.subject]||=[]).push(n.id); });
+    Object.values(bySubject).forEach(ids => {
+      for (let i=0;i<ids.length-1;i++) {
+        edges.push({s:ids[i],t:ids[i+1]});
+        nm[ids[i]].conn++; nm[ids[i+1]].conn++;
+      }
+    });
+    gd = { nodes: Object.values(nm), edges };
+  }
+
+  graph = { ...gd, transform: { x: 0, y: 0, scale: 1 } };
+  if (animFr) cancelAnimationFrame(animFr);
+  let i = 0;
+  (function tick() {
+    if (i < 240) { layout(); i++; }
+    drawGraph();
+    animFr = requestAnimationFrame(tick);
+    if (i >= 240 && !dragNode && !isPan) cancelAnimationFrame(animFr);
   })();
 }
 
 function layout() {
-  const ns=graph.nodes,k=90;
-  ns.forEach(a=>{ns.forEach(b=>{
-    if(a.id===b.id)return;
-    const dx=a.x-b.x,dy=a.y-b.y,d=Math.max(Math.hypot(dx,dy),1),f=k*k/d;
-    a.vx+=dx/d*f*.05;a.vy+=dy/d*f*.05;
-  });});
-  graph.edges.forEach(e=>{
-    const a=graph.nodes.find(n=>n.id===e.s),b=graph.nodes.find(n=>n.id===e.t);
-    if(!a||!b)return;
-    const dx=b.x-a.x,dy=b.y-a.y,d=Math.max(Math.hypot(dx,dy),1),f=(d-k*1.1)*.05;
-    a.vx+=dx/d*f;a.vy+=dy/d*f;b.vx-=dx/d*f;b.vy-=dy/d*f;
+  const ns = graph.nodes, k = 90;
+  ns.forEach(a => { ns.forEach(b => {
+    if (a.id === b.id) return;
+    const dx=a.x-b.x, dy=a.y-b.y, d=Math.max(Math.hypot(dx,dy),1), f=k*k/d;
+    a.vx+=dx/d*f*.05; a.vy+=dy/d*f*.05;
+  }); });
+  graph.edges.forEach(e => {
+    const a=graph.nodes.find(n=>n.id===e.s), b=graph.nodes.find(n=>n.id===e.t);
+    if (!a||!b) return;
+    const dx=b.x-a.x, dy=b.y-a.y, d=Math.max(Math.hypot(dx,dy),1), f=(d-k*1.1)*.05;
+    a.vx+=dx/d*f; a.vy+=dy/d*f; b.vx-=dx/d*f; b.vy-=dy/d*f;
   });
-  const cv=document.getElementById('gc');
-  ns.forEach(n=>{
-    n.vx+=(cv.width/2-n.x)*.007;n.vy+=(cv.height/2-n.y)*.007;
-    n.vx*=.75;n.vy*=.75;n.x+=n.vx;n.y+=n.vy;
+  const cv = document.getElementById('gc');
+  ns.forEach(n => {
+    n.vx += (cv.width/2 - n.x) * .007;
+    n.vy += (cv.height/2 - n.y) * .007;
+    n.vx *= .75; n.vy *= .75;
+    n.x += n.vx; n.y += n.vy;
   });
 }
+
 
 function drawGraph() {
   const cv=document.getElementById('gc'),ctx=cv.getContext('2d');
@@ -555,7 +589,11 @@ gc2.addEventListener('mousemove',e=>{
 gc2.addEventListener('mouseup',()=>{if(dragNode){dragNode=null;dragOff=null;}if(isPan){isPan=false;panStart=null;}});
 gc2.addEventListener('click',e=>{
   const p=cpos(e),hit=hnode(p.x,p.y);
-  if(hit){const n=allNotes.find(n=>n.id===hit.id);if(n)openNote(n);}
+  if(hit){
+    // Find note by md path first (cross-subject), fall back to id
+    const n = allNotes.find(n=>n.md===hit.md) || allNotes.find(n=>n.id===hit.id);
+    if(n) openNote(n);
+  }
 });
 gc2.addEventListener('wheel',e=>{
   e.preventDefault();
