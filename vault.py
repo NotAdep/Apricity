@@ -94,8 +94,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 notify_open(md)
             self.json_response({"ok": True})
 
-        # ── API: full text search ──────────────────────────────
-        elif path == "/api/search":
+        # ── API: graph data from real wikilinks ───────────────
+        elif path == "/api/graph":
+            self.json_response(build_graph())
             q = params.get("q", "").strip()
             self.json_response(full_text_search(q) if q else [])
 
@@ -213,6 +214,86 @@ def full_text_search(query: str) -> list:
         except Exception:
             pass
     return results
+
+
+# ── Graph builder from real links ─────────────────────────────
+def build_graph() -> dict:
+    """
+    Parse all .md files for [[wikilinks]] and [text](file.html) links.
+    Returns nodes and edges for the graph view.
+    """
+    import re
+
+    # Build title → note map
+    title_map = {}
+    all_notes = []
+    if not VAULT.exists():
+        return {"nodes": [], "edges": []}
+
+    for md in VAULT.rglob("*.md"):
+        try:
+            parts = md.relative_to(VAULT).parts
+            if len(parts) < 2:
+                continue
+            subject = parts[0]
+            if subject.startswith((".", "_")):
+                continue
+            title, author, date = parse_frontmatter(md)
+            html = md.with_suffix(".html")
+            note = {
+                "id":      md.stem,
+                "title":   title,
+                "subject": subject,
+                "md":      str(md.relative_to(VAULT)),
+                "html":    str(html.relative_to(VAULT)) if html.exists() else None,
+            }
+            all_notes.append(note)
+            title_map[title.lower()] = note
+            title_map[md.stem.lower()] = note
+            title_map[md.stem.lower().replace("_", " ")] = note
+        except Exception:
+            pass
+
+    # Parse links from each note
+    edges = []
+    seen_edges = set()
+
+    for note in all_notes:
+        try:
+            md_path = VAULT / note["md"]
+            text = md_path.read_text(encoding="utf-8", errors="ignore")
+
+            # [[wikilinks]]
+            for m in re.finditer(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]', text):
+                target_title = m.group(1).strip().lower()
+                target = title_map.get(target_title)
+                if target and target["id"] != note["id"]:
+                    edge_key = tuple(sorted([note["id"], target["id"]]))
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        edges.append({
+                            "source": note["id"],
+                            "target": target["id"],
+                        })
+
+            # [text](file.html) links
+            for m in re.finditer(r'\[([^\]]+)\]\(([^)]+\.html?)\)', text):
+                href = m.group(2)
+                stem = href.replace(".html", "").replace(".htm", "")
+                stem = stem.split("/")[-1].lower()
+                target = title_map.get(stem)
+                if target and target["id"] != note["id"]:
+                    edge_key = tuple(sorted([note["id"], target["id"]]))
+                    if edge_key not in seen_edges:
+                        seen_edges.add(edge_key)
+                        edges.append({
+                            "source": note["id"],
+                            "target": target["id"],
+                        })
+        except Exception:
+            pass
+
+    return {"nodes": all_notes, "edges": edges}
 
 
 # ── Vault tree builder ─────────────────────────────────────────
