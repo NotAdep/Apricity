@@ -28,7 +28,7 @@ Navigate with `j` and `k`. Selecting a note previews it instantly in the right p
 
 Press `Enter` to open and edit the note in Vim:
 
-<img src="Notes_edit.png" width="700" alt="Editing a note in Vim">
+<img src="Notes-edit.png" width="700" alt="Editing a note in Vim">
 
 Press `b` anywhere to open the browser viewer with full math rendering:
 
