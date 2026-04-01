@@ -343,7 +343,11 @@ Current version: **v1.4.0**
 
 ## License
 
-MIT License — Copyright (c) 2026 NotAdep
+GNU General Public License v3.0 — Copyright (c) 2026 NotAdep
+
+This software is free to use, modify and distribute under the terms of
+the GPL-3.0 licence. Any derivative work must also be open source under
+the same licence.
 
 See [LICENSE](LICENSE) for the full text.
 
