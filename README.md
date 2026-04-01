@@ -28,7 +28,7 @@ Navigate with `j` and `k`. Selecting a note previews it instantly in the right p
 
 Press `Enter` to open and edit the note in Vim:
 
-<img src="Notes-edit.png" width="700" alt="Editing a note in Vim">
+<img src="Notes_edit.png" width="700" alt="Editing a note in Vim">
 
 Press `b` anywhere to open the browser viewer with full math rendering:
 
@@ -78,21 +78,26 @@ Link notes using `[[WikiLinks]]` and the graph view shows real connections:
 
 ## Installation
 
+Clone Apricity into a subfolder inside your notes folder. The notes folder
+can be named anything and placed anywhere — Apricity figures out the path
+automatically.
+
 ```bash
-git clone https://github.com/NotAdep/Apricity.git
-cd Apricity
+# Create your notes folder — name it whatever you like
+mkdir ~/MyNotes
+
+# Clone Apricity into it
+git clone https://github.com/NotAdep/Apricity.git ~/MyNotes/Apricity
+
+# Create your first subject folder
+mkdir ~/MyNotes/Mathematics
 ```
 
-Open `vault.py` and point it at your notes folder:
-
-```python
-VAULT = Path.home() / "KnowledgeVault"  # change this to your notes folder
-```
-
-That is it. No virtual environments, no package managers, no setup scripts.
+That is it. No configuration needed. Apricity reads its vault location
+from its own file path — one level above the `Apricity/` folder.
 
 > **New to this?** See the [Setup Guide](#setup-guide) below for a
-> step-by-step walkthrough including Pandoc and Vim installation.
+> step-by-step walkthrough.
 
 ---
 
@@ -101,18 +106,13 @@ That is it. No virtual environments, no package managers, no setup scripts.
 ### Start everything
 
 ```bash
+cd ~/MyNotes/Apricity
 python3 Apricity.py
 ```
 
 The splash screen plays, the server starts silently in the background,
 and the TUI loads. Open `http://localhost:7777` in your browser for the
 full viewer. Press `q` to quit — the server stops automatically.
-
-You can also run the server on its own:
-
-```bash
-python3 vault.py
-```
 
 ### TUI controls
 
@@ -140,25 +140,29 @@ Add these to your `~/.vimrc`:
 
 ```vim
 let mapleader = ","
-nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc -c ../style.css --lua-filter=$HOME/KnowledgeVault/wikilinks.lua -o "%:r.html"<CR>
+nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc -c ../../Apricity/style.css --lua-filter=../../Apricity/wikilinks.lua -o "%:r.html"<CR>
 nnoremap <leader>p :w<CR>:!pandoc "%" --pdf-engine=xelatex -o "%:r.pdf"<CR>
 ```
 
 - `,c` — compile current note to HTML. Wikilinks resolved, browser auto-reloads
 - `,p` — export current note to a PDF with fully rendered math
 
+These paths are relative — they work regardless of where your vault is.
+
 ### Vault structure
 
-Apricity expects one level of subject folders inside your vault:
-
 ```
-~/KnowledgeVault/
-  Apricity.py
-  vault.py
-  notes-viewer.html
-  style.css
-  wikilinks.lua
-  Mathematics/
+[your vault]/              ← name this anything, put it anywhere
+  Apricity/                ← cloned here, never touch
+    Apricity.py
+    vault.py
+    notes-viewer.html
+    style.css
+    wikilinks.lua
+    CHANGELOG.md
+    README.md
+    LICENSE
+  Mathematics/             ← your subject folders
     Calculus.md
     Calculus.html
   Physics/
@@ -166,7 +170,8 @@ Apricity expects one level of subject folders inside your vault:
     NewtonLaws.html
 ```
 
-Each subject is a folder. Notes go inside. That is it.
+Your subject folders sit alongside `Apricity/`. The system folder is
+hidden from the TUI, search, and graph view automatically.
 
 ### Writing notes
 
@@ -176,7 +181,7 @@ Every note starts with YAML frontmatter:
 ---
 title: Lagrange Interpolation
 author: Your Name
-date: 31/03/2026
+date: 01/04/2026
 ---
 
 # Lagrange Interpolation
@@ -185,9 +190,7 @@ Use $inline math$ and display math:
 
 $$L_i(x) = \prod_{j=0, j \neq i}^{n} \frac{x - x_j}{x_i - x_j}$$
 
-Link to a note in the same subject: [Matrix Product](Matrix_product.html)
-
-Link to a note in any subject using wikilinks: [[Newton's Laws]]
+Link to any note using wikilinks: [[Newton's Laws]]
 
 Wikilink with custom display text: [[Newton's Laws|see also]]
 
@@ -217,22 +220,17 @@ Compile with `,c`. Wikilinks are resolved automatically and the browser reloads.
 - **Collapsible folders** — keep the TUI clean as your vault grows
 - **UK date format** — DD/MM/YYYY parsed from YAML frontmatter
 - **Server lifecycle** — one command starts everything, `q` stops everything
+- **Portable** — name your vault anything, put it anywhere. No hardcoded paths
 
 ---
 
 ## Customisation
 
-All styling lives in `style.css`. The colour scheme is Dracula-inspired
-with Charter as the body font — both are system fonts on macOS, no
-downloads needed.
+All styling lives in `style.css` inside the `Apricity/` folder. The colour
+scheme is Dracula-inspired with Charter as the body font — both are system
+fonts on macOS, no downloads needed.
 
-To change the vault path, edit `vault.py`:
-
-```python
-VAULT = Path("/path/to/your/notes")
-```
-
-The server runs on port `7777` by default. To change it:
+The server runs on port `7777` by default. To change it, edit `vault.py`:
 
 ```python
 PORT = 7777
@@ -242,13 +240,11 @@ PORT = 7777
 
 ## Setup Guide
 
-For users who are new to Vim and Pandoc:
-
 ### 1. Install Pandoc
 
-Download the macOS installer directly from
+Download the macOS installer from
 [pandoc.org/installing.html](https://pandoc.org/installing.html).
-Run the `.pkg` file. That is it.
+Run the `.pkg` file.
 
 Verify:
 ```bash
@@ -264,7 +260,16 @@ vim --version
 
 If you prefer NeoVim, download it from [neovim.io](https://neovim.io).
 
-### 3. Add Vim shortcuts
+### 3. Create your vault and install Apricity
+
+```bash
+# Name your vault whatever you like
+mkdir ~/MyNotes
+git clone https://github.com/NotAdep/Apricity.git ~/MyNotes/Apricity
+mkdir ~/MyNotes/Mathematics
+```
+
+### 4. Add Vim shortcuts
 
 ```bash
 vim ~/.vimrc
@@ -273,30 +278,16 @@ vim ~/.vimrc
 Paste:
 ```vim
 let mapleader = ","
-nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc -c ../style.css --lua-filter=$HOME/KnowledgeVault/wikilinks.lua -o "%:r.html"<CR>
+nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc -c ../../Apricity/style.css --lua-filter=../../Apricity/wikilinks.lua -o "%:r.html"<CR>
 nnoremap <leader>p :w<CR>:!pandoc "%" --pdf-engine=xelatex -o "%:r.pdf"<CR>
 ```
 
 Save with `:wq`.
 
-### 4. Create your vault
+### 5. Run it
 
 ```bash
-mkdir -p ~/KnowledgeVault/Mathematics
-```
-
-### 5. Clone and configure Apricity
-
-```bash
-git clone https://github.com/NotAdep/Apricity.git ~/KnowledgeVault
-cd ~/KnowledgeVault
-```
-
-Open `vault.py` in any text editor and confirm the vault path is correct.
-
-### 6. Run it
-
-```bash
+cd ~/MyNotes/Apricity
 python3 Apricity.py
 ```
 
@@ -337,7 +328,7 @@ Pandoc, Apricity was built for you.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v1.4.0**
+Current version: **v1.5.0**
 
 ---
 

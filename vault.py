@@ -31,7 +31,7 @@ import time
 import urllib.parse
 from pathlib import Path
 
-VAULT = Path.home() / "KnowledgeVault"
+VAULT = Path(__file__).resolve().parent.parent  # ~/KnowledgeVault/ — one level above Apricity/
 PORT  = 7777
 
 # Track file modification times for reload detection
@@ -146,9 +146,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif path == "/" or path == "/index.html":
             self.serve_file(Path(__file__).parent / "notes-viewer.html", "text/html")
 
-        # ── Serve style.css from vault root ───────────────────
+        # ── Serve style.css from Apricity folder ──────────────
         elif path == "/style.css":
-            self.serve_file(VAULT / "style.css", "text/css")
+            self.serve_file(Path(__file__).parent / "style.css", "text/css")
 
         # ── Serve any file from vault ──────────────────────────
         else:
@@ -193,12 +193,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
 # ── Full text search ───────────────────────────────────────────
 def full_text_search(query: str) -> list:
     """Search all .md files for query, return list of note dicts with excerpts."""
-    ql      = query.lower()
-    results = []
+    ql            = query.lower()
+    results       = []
+    apricity_name = Path(__file__).parent.name
     if not VAULT.exists():
         return results
     for md in VAULT.rglob("*.md"):
         try:
+            parts = md.relative_to(VAULT).parts
+            if len(parts) < 2:
+                continue
+            if parts[0] == apricity_name:
+                continue  # skip system files
             text = md.read_text(encoding="utf-8", errors="ignore")
             if ql not in text.lower():
                 continue
@@ -235,6 +241,7 @@ def build_graph() -> dict:
     Returns nodes and edges for the graph view.
     """
     import re
+    apricity_name = Path(__file__).parent.name
 
     # Build title → note map
     title_map = {}
@@ -250,6 +257,8 @@ def build_graph() -> dict:
             subject = parts[0]
             if subject.startswith((".", "_")):
                 continue
+            if subject == apricity_name:
+                continue  # skip system files
             title, author, date = parse_frontmatter(md)
             html = md.with_suffix(".html")
             note = {
@@ -313,9 +322,15 @@ def build_tree():
     tree = []
     if not VAULT.exists():
         return tree
+    # Derive the name of the Apricity system folder to exclude it
+    apricity_folder = Path(__file__).parent.name
     for subject in sorted(VAULT.iterdir()):
-        if not subject.is_dir() or subject.name.startswith((".", "_")):
+        if not subject.is_dir():
             continue
+        if subject.name.startswith((".", "_")):
+            continue
+        if subject.name == apricity_folder:
+            continue  # skip the Apricity system folder
         notes = []
         for md in sorted(subject.glob("*.md")):
             html = md.with_suffix(".html")

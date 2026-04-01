@@ -28,7 +28,7 @@ Controls:
   q           quit
 """
 
-BUILD = "1.4.0"
+BUILD = "1.5.0"
 
 import curses
 import json
@@ -80,7 +80,7 @@ def build_items(tree, collapsed):
 
 # ── Open helpers ───────────────────────────────────────────────
 def open_in_vim(md_path):
-    vault_dir = os.path.expanduser("~/KnowledgeVault")
+    vault_dir = str(vault.VAULT)
     full  = os.path.join(vault_dir, md_path)
     curses.endwin()
     os.system(f"vim '{full}'")
@@ -355,7 +355,7 @@ def draw_preview(win, item, server_ok, rg_matches=None, preview_scroll=0):
             pass
 
     # Read markdown preview
-    vault_dir = os.path.expanduser("~/KnowledgeVault")
+    vault_dir = str(vault.VAULT)
     full  = os.path.join(vault_dir, md_path)
     try:
         with open(full, "r", encoding="utf-8", errors="ignore") as f:
@@ -411,7 +411,7 @@ def draw_preview(win, item, server_ok, rg_matches=None, preview_scroll=0):
 def extract_pdfs_from_note(md_path):
     """Find only PDF files explicitly linked in the note."""
     import re
-    vault_dir = os.path.expanduser("~/KnowledgeVault")
+    vault_dir = str(vault.VAULT)
     folder    = os.path.dirname(os.path.join(vault_dir, md_path))
     pdfs      = []
 
@@ -442,12 +442,15 @@ def py_search(query):
     Search all .md files in vault for query string.
     Returns dict: relative_md_path → [matching lines]
     """
-    vault_dir = os.path.expanduser("~/KnowledgeVault")
-    ql        = query.lower()
-    matches   = {}
+    vault_dir     = str(vault.VAULT)
+    apricity_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+    ql            = query.lower()
+    matches       = {}
     try:
         for root, dirs, files in os.walk(vault_dir):
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            # Exclude hidden folders and the Apricity system folder
+            dirs[:] = [d for d in dirs if not d.startswith('.')
+                       and d != apricity_name]
             for fname in files:
                 if not fname.endswith('.md'):
                     continue
@@ -474,7 +477,7 @@ def extract_links_from_note(md_path):
     Returns list of display titles that can be resolved across all subjects.
     """
     import re
-    vault_dir = os.path.expanduser("~/KnowledgeVault")
+    vault_dir = str(vault.VAULT)
     full      = os.path.join(vault_dir, md_path)
     links     = []
     try:
@@ -604,7 +607,7 @@ def prompt_new_note(stdscr, subject_name):
 def create_and_open_note(subject_name, filename):
     """Create a new .md file with pre-filled frontmatter and open in Vim."""
     from datetime import date as _date
-    vault_dir = os.path.expanduser("~/KnowledgeVault")
+    vault_dir = str(vault.VAULT)
     clean    = filename.strip().replace(" ", "_")
     if not clean.endswith(".md"):
         clean += ".md"
@@ -800,7 +803,7 @@ def main(stdscr):
                     confirmed = prompt_confirm(stdscr,
                         f"Delete {target_type} '{label}'? This cannot be undone.")
                     if confirmed:
-                        vault_dir = os.path.expanduser("~/KnowledgeVault")
+                        vault_dir = str(vault.VAULT)
                         import shutil
                         if current["_type"] == "note":
                             md_path = os.path.join(vault_dir, current["md"])

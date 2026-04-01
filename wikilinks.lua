@@ -1,13 +1,16 @@
 -- wikilinks.lua
 -- Pandoc Lua filter that converts [[Note Title]] to HTML links.
--- Place this file in ~/KnowledgeVault/ alongside vault.py.
--- Update your ,c command in vimrc to include: --lua-filter=../wikilinks.lua
+-- Place this file in ~/KnowledgeVault/Apricity/ alongside vault.py.
+-- Update your ,c command in vimrc to include: --lua-filter=$HOME/KnowledgeVault/Apricity/wikilinks.lua
 --
 -- How it works:
 --   [[Note Title]]           → looks for Note_Title.html in same or sibling folders
 --   [[Note Title|link text]] → same but displays "link text" instead
 
-local vault_path = os.getenv("HOME") .. "/KnowledgeVault"
+-- Derive vault path from this script's location (Apricity/ → KnowledgeVault/)
+local script_path = debug.getinfo(1, "S").source:sub(2)  -- remove leading @
+local apricity_dir = script_path:match("(.*/)")  -- directory containing this file
+local vault_path = apricity_dir:match("(.+/)[^/]+/$") or (os.getenv("HOME") .. "/KnowledgeVault")
 
 -- Build a map of title → relative html path by scanning all .md files
 local function build_title_map()
