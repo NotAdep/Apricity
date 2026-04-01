@@ -1,4 +1,7 @@
-# Apricity
+<h1>
+  <img src="icon.png" width="100" style="vertical-align: middle; margin-right: 10px;">
+  Apricity
+</h1>
 
 > *apricity (n.)* — the warmth of the sun in winter.
 
