@@ -94,13 +94,15 @@ git clone https://github.com/NotAdep/Apricity.git ~/MyNotes/Apricity
 
 # To match the terminal setup as I have shown
 ~MyNotes/Apricity/Apricity.terminal
- 
+
 # Create your first subject folder
 mkdir ~/MyNotes/Mathematics
 ```
 
-That is it. No configuration needed. Apricity reads its vault location
-from its own file path — one level above the `Apricity/` folder.
+> **The system folder is not hidden or locked.** All source code is
+> available on [GitHub](https://github.com/NotAdep/Apricity). The
+> `Apricity/` folder is excluded from your note sidebar automatically —
+> it will never appear alongside your subjects.
 
 > **New to this?** See the [Setup Guide](#setup-guide) below for a
 > step-by-step walkthrough.
@@ -128,6 +130,7 @@ full viewer. Press `q` to quit — the server stops automatically.
 | `k` / `↑` | Move up |
 | `Enter` | Expand/collapse folder · Open note in Vim |
 | `n` | New note in current subject (pre-fills frontmatter) |
+| `N` | New subject folder |
 | `d` | Delete note or folder — asks for confirmation |
 | `o` | Open selected note in browser |
 | `b` | Open full vault in browser |
@@ -142,43 +145,38 @@ full viewer. Press `q` to quit — the server stops automatically.
 
 ### Vim shortcuts
 
-Add these to your `~/.vimrc`:
+Add these to your `~/.vimrc` — replace `MyNotes` with your vault name:
 
 ```vim
 let mapleader = ","
-nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc -c ../../Apricity/style.css --lua-filter=../../Apricity/wikilinks.lua -o "%:r.html"<CR>
+nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc --embed-resources --standalone -c $HOME/MyNotes/Apricity/style.css --lua-filter=$HOME/MyNotes/Apricity/wikilinks.lua -o "%:r.html"<CR>
 nnoremap <leader>p :w<CR>:!pandoc "%" --pdf-engine=xelatex -o "%:r.pdf"<CR>
 ```
 
-- `,c` — compile current note to HTML. Wikilinks resolved, browser auto-reloads
+- `,c` — compile current note to HTML. CSS embedded, wikilinks resolved,
+  browser auto-reloads
 - `,p` — export current note to a PDF with fully rendered math
-
-These paths are relative — they work regardless of where your vault is.
 
 ### Vault structure
 
 ```
 [your vault]/              ← name this anything, put it anywhere
-  Apricity/                ← cloned here, never touch
+  Apricity/                ← system folder, excluded from TUI automatically
     Apricity.py
     vault.py
     notes-viewer.html
     style.css
     wikilinks.lua
-    Apricity.terminal
     CHANGELOG.md
     README.md
     LICENSE
-  Mathematics/             ← your subject folders
+  Mathematics/             ← your subject folders live here
     Calculus.md
     Calculus.html
   Physics/
     NewtonLaws.md
     NewtonLaws.html
 ```
-
-Your subject folders sit alongside `Apricity/`. The system folder is
-hidden from the TUI, search, and graph view automatically.
 
 ### Writing notes
 
@@ -188,7 +186,7 @@ Every note starts with YAML frontmatter:
 ---
 title: Lagrange Interpolation
 author: Your Name
-date: 01/04/2026
+date: 02/04/2026
 ---
 
 # Lagrange Interpolation
@@ -204,7 +202,7 @@ Wikilink with custom display text: [[Newton's Laws|see also]]
 Attach a PDF: [Lecture Slides](slides.pdf)
 ```
 
-Compile with `,c`. Wikilinks are resolved automatically and the browser reloads.
+Compile with `,c`. Wikilinks are resolved and the browser reloads automatically.
 
 ---
 
@@ -212,22 +210,20 @@ Compile with `,c`. Wikilinks are resolved automatically and the browser reloads.
 
 - **Wikilinks** — use `[[Note Title]]` to link any note from any subject.
   Resolved at compile time by the included Lua filter
-- **Real graph view** — the browser graph shows actual connections between
-  notes based on wikilinks and markdown links, not just subject groupings
-- **Full-text search** — searches inside every `.md` file across all subjects,
-  not just titles. Shows matching excerpts in results
-- **Auto-reload** — browser updates automatically the moment you press `,c`
-- **Cross-subject link navigation** — press `l` in the TUI to jump to any
-  linked note regardless of which subject it is in
-- **PDF support** — link PDFs in notes and open them with `p` in the TUI,
-  or click the link in the browser viewer
-- **PDF export** — share any note as a self-contained PDF with rendered math
-- **New note from TUI** — press `n` and type a name. Vim opens with
-  frontmatter already filled in
+- **Real graph view** — browser graph shows actual connections between
+  notes based on wikilinks and markdown links
+- **Full-text search** — searches inside every `.md` file, not just titles.
+  Search clears automatically after opening a note
+- **Auto-reload** — browser updates the moment you press `,c`
+- **Cross-subject link navigation** — press `l` to jump to any linked note
+- **PDF support** — link PDFs and open them with `p`, or click in browser
+- **PDF export** — export any note as a self-contained PDF with math
+- **New note** — press `n`, Vim opens with frontmatter pre-filled
+- **New folder** — press `N` to create a new subject folder
 - **Collapsible folders** — keep the TUI clean as your vault grows
-- **UK date format** — DD/MM/YYYY parsed from YAML frontmatter
+- **UK date format** — DD/MM/YYYY from YAML frontmatter
 - **Server lifecycle** — one command starts everything, `q` stops everything
-- **Portable** — name your vault anything, put it anywhere. No hardcoded paths
+- **Portable** — name your vault anything, put it anywhere
 
 ---
 
@@ -236,8 +232,6 @@ Compile with `,c`. Wikilinks are resolved automatically and the browser reloads.
 All styling lives in `style.css` inside the `Apricity/` folder. The colour
 scheme is Dracula-inspired with Charter as the body font — both are system
 fonts on macOS, no downloads needed.
-
-For Terminal, just run `Apricity.terminal` file. It will give you the same look as I've shown above.
 
 The server runs on port `7777` by default. To change it, edit `vault.py`:
 
@@ -251,9 +245,8 @@ PORT = 7777
 
 ### 1. Install Pandoc
 
-Download the macOS installer from
-[pandoc.org/installing.html](https://pandoc.org/installing.html).
-Run the `.pkg` file.
+Download from [pandoc.org/installing.html](https://pandoc.org/installing.html)
+and run the `.pkg` file.
 
 Verify:
 ```bash
@@ -267,12 +260,11 @@ Vim comes pre-installed on macOS. Verify:
 vim --version
 ```
 
-If you prefer NeoVim, download it from [neovim.io](https://neovim.io).
+If you prefer NeoVim, download from [neovim.io](https://neovim.io).
 
 ### 3. Create your vault and install Apricity
 
 ```bash
-# Name your vault whatever you like
 mkdir ~/MyNotes
 git clone https://github.com/NotAdep/Apricity.git ~/MyNotes/Apricity
 mkdir ~/MyNotes/Mathematics
@@ -284,10 +276,10 @@ mkdir ~/MyNotes/Mathematics
 vim ~/.vimrc
 ```
 
-Paste:
+Paste — replacing `MyNotes` with your vault folder name:
 ```vim
 let mapleader = ","
-nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc -c ../../Apricity/style.css --lua-filter=../../Apricity/wikilinks.lua -o "%:r.html"<CR>
+nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc --embed-resources --standalone -c $HOME/MyNotes/Apricity/style.css --lua-filter=$HOME/MyNotes/Apricity/wikilinks.lua -o "%:r.html"<CR>
 nnoremap <leader>p :w<CR>:!pandoc "%" --pdf-engine=xelatex -o "%:r.pdf"<CR>
 ```
 
@@ -337,7 +329,7 @@ Pandoc, Apricity was built for you.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v1.5.0**
+Current version: **v1.5.1**
 
 ---
 
