@@ -92,9 +92,6 @@ mkdir ~/MyNotes
 # Clone Apricity into it
 git clone https://github.com/NotAdep/Apricity.git ~/MyNotes/Apricity
 
-# To match the terminal setup as I have shown
-~MyNotes/Apricity/Apricity.terminal
-
 # Create your first subject folder
 mkdir ~/MyNotes/Mathematics
 ```
@@ -106,6 +103,21 @@ mkdir ~/MyNotes/Mathematics
 
 > **New to this?** See the [Setup Guide](#setup-guide) below for a
 > step-by-step walkthrough.
+
+---
+
+## Terminal Profile
+
+To match the terminal appearance shown in the screenshots, an
+`Apricity.terminal` profile is included in the `Apricity/` folder.
+
+To install it on macOS:
+1. Open **Terminal** → **Settings** → **Profiles**
+2. Click the gear icon at the bottom → **Import...**
+3. Navigate to `~/MyNotes/Apricity/Apricity.terminal` and open it
+4. Set it as default if you wish
+
+This is optional — Apricity works with any terminal.
 
 ---
 
