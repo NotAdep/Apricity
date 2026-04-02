@@ -92,6 +92,9 @@ mkdir ~/MyNotes
 # Clone Apricity into it
 git clone https://github.com/NotAdep/Apricity.git ~/MyNotes/Apricity
 
+# To match the terminal setup as I have shown
+~MyNotes/Apricity/Apricity.terminal
+ 
 # Create your first subject folder
 mkdir ~/MyNotes/Mathematics
 ```
@@ -162,6 +165,7 @@ These paths are relative — they work regardless of where your vault is.
     notes-viewer.html
     style.css
     wikilinks.lua
+    Apricity.terminal
     CHANGELOG.md
     README.md
     LICENSE
@@ -232,6 +236,8 @@ Compile with `,c`. Wikilinks are resolved automatically and the browser reloads.
 All styling lives in `style.css` inside the `Apricity/` folder. The colour
 scheme is Dracula-inspired with Charter as the body font — both are system
 fonts on macOS, no downloads needed.
+
+For Terminal, just run `Apricity.terminal` file. It will give you the same look as I've shown above.
 
 The server runs on port `7777` by default. To change it, edit `vault.py`:
 
