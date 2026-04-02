@@ -11,15 +11,15 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
-notes-server.py
----------------
-Local server for KnowledgeVault viewer.
-- Serves files from ~/KnowledgeVault
-- Handles Open in Vim (Terminal.app)
-- Sends reload signal when HTML files change
-- Run: python3 notes-server.py
-- Then open: http://localhost:7777
+vault.py — Local HTTP server for Apricity
+------------------------------------------
+Serves the vault, handles API requests, SSE reload stream.
+Run standalone: python3 vault.py
+Or imported by Apricity.py which manages the lifecycle.
 """
 
 import http.server

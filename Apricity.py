@@ -11,24 +11,16 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 """
-Apricity / KnowledgeVault TUI
----------------------------------------------
-Controls:
-  j / ↓       move down
-  k / ↑       move up
-  Enter       on subject: expand/collapse  |  on note: open in Vim
-  o           open note in browser
-  b           open full vault in browser (http://localhost:7777)
-  l           link picker — jump to linked notes
-  Ctrl+D/U    scroll preview down/up
-  /           search
-  Esc         clear search
-  r           refresh
-  q           quit
+Apricity.py — Terminal TUI
+--------------------------
+Build : 1.5.1
 """
 
-BUILD = "1.5.0"
+BUILD = "1.5.1"
 
 import curses
 import json
@@ -87,11 +79,45 @@ def open_in_vim(md_path):
 
 
 def is_browser_open():
-    """Check if the viewer is already open by seeing if any SSE clients are connected."""
+    """Check if localhost:7777 is currently open in any browser tab."""
+    script = '''
+tell application "System Events"
+    set found to false
+    if exists process "Firefox" then
+        tell application "Firefox"
+            set winList to every window
+            repeat with w in winList
+                set tabList to every tab of w
+                repeat with t in tabList
+                    if URL of t contains "localhost:7777" then
+                        set found to true
+                    end if
+                end repeat
+            end repeat
+        end tell
+    end if
+    if exists process "Safari" then
+        tell application "Safari"
+            set winList to every window
+            repeat with w in winList
+                set tabList to every tab of w
+                repeat with t in tabList
+                    if URL of t contains "localhost:7777" then
+                        set found to true
+                    end if
+                end repeat
+            end repeat
+        end tell
+    end if
+    return found
+end tell
+'''
     try:
-        import vault as v
-        with v._clients_lock:
-            return len(v._clients) > 0
+        result = subprocess.run(
+            ["osascript", "-e", script],
+            capture_output=True, text=True, timeout=3
+        )
+        return result.stdout.strip() == "true"
     except Exception:
         return False
 
@@ -100,17 +126,10 @@ def focus_browser():
     """Focus existing Firefox/Safari window without opening a new tab."""
     script = '''
 tell application "System Events"
-    set browserRunning to false
-    if exists process "Firefox" then set browserRunning to true
-    if exists process "Safari" then set browserRunning to true
-    if browserRunning then
-        if exists process "Firefox" then
-            tell application "Firefox" to activate
-        else
-            tell application "Safari" to activate
-        end if
-    else
-        do shell script "open http://localhost:7777"
+    if exists process "Firefox" then
+        tell application "Firefox" to activate
+    else if exists process "Safari" then
+        tell application "Safari" to activate
     end if
 end tell
 '''
@@ -123,7 +142,7 @@ def open_note_in_browser(note):
     browser_already_open = is_browser_open()
 
     if browser_already_open:
-        # SSE clients connected — send open event directly
+        # Tab is open — focus it and send SSE open event
         focus_browser()
         time.sleep(0.1)
         try:
@@ -133,10 +152,10 @@ def open_note_in_browser(note):
         except Exception:
             pass
     else:
-        # Browser not open — open it, wait for SSE connection, then send
+        # Tab is closed or browser not running — open fresh tab
         subprocess.Popen(["open", API],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        # Wait for browser to load and connect to SSE stream
+        # Wait for page to load and SSE to connect, then send open event
         def delayed_open():
             time.sleep(2)
             try:
@@ -149,9 +168,11 @@ def open_note_in_browser(note):
 
 
 def open_vault_in_browser():
-    focus_browser()
-    subprocess.Popen(["open", API],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if is_browser_open():
+        focus_browser()
+    else:
+        subprocess.Popen(["open", API],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 # ── Colours ────────────────────────────────────────────────────
@@ -634,6 +655,57 @@ date: {today}
     os.system(f"vim '{full}'")
 
 
+def prompt_new_folder(stdscr):
+    """
+    Show a folder name prompt. Returns the entered name or None if cancelled.
+    """
+    h, w    = stdscr.getmaxyx()
+    prompt  = " New subject folder — name: "
+    box_w   = min(70, w - 4)
+    box_x   = max(0, (w - box_w) // 2)
+    box_y   = h // 2
+
+    win = curses.newwin(3, box_w, box_y, box_x)
+    curses.curs_set(1)
+
+    foldername = ""
+    while True:
+        win.erase()
+        try:
+            win.attron(curses.color_pair(C_BORDER))
+            win.border()
+            win.attroff(curses.color_pair(C_BORDER))
+            win.addstr(0, 2, " New Folder ", curses.color_pair(C_SUBJECT) | curses.A_BOLD)
+            label = truncate(prompt + foldername + "_", box_w - 2)
+            win.addstr(1, 1, label, curses.color_pair(C_SEARCH))
+        except curses.error:
+            pass
+        win.refresh()
+
+        key = stdscr.getch()
+        if key in (27,):
+            curses.curs_set(0)
+            return None
+        elif key in (10, 13):
+            curses.curs_set(0)
+            return foldername.strip() if foldername.strip() else None
+        elif key in (curses.KEY_BACKSPACE, 127):
+            foldername = foldername[:-1]
+        elif 32 <= key <= 126:
+            foldername += chr(key)
+
+
+def create_folder(foldername):
+    """Create a new subject folder in the vault."""
+    vault_dir = str(vault.VAULT)
+    clean     = foldername.strip().replace(" ", "_")
+    full      = os.path.join(vault_dir, clean)
+    if not os.path.exists(full):
+        os.makedirs(full)
+        return clean
+    return None
+
+
 def main(stdscr):
     curses.curs_set(0)
     stdscr.nodelay(False)
@@ -773,7 +845,19 @@ def main(stdscr):
                     rebuild_items(search_q)
                 elif current["_type"] == "note":
                     open_in_vim(current["md"])
-                    rebuild_items(search_q)
+                    # Clear search after opening so full vault is restored
+                    search_q = ""
+                    search   = None
+                    # Keep the note visible by expanding its subject
+                    if current.get("subject"):
+                        collapsed[current["subject"]] = False
+                    rebuild_items()
+                    # Reselect the note we just opened
+                    for idx, item in enumerate(items):
+                        if item["_type"] == "note" and item["md"] == current["md"]:
+                            selected = idx
+                            scroll   = max(0, idx - 3)
+                            break
 
         elif key == ord('n'):   # new note in current subject
             if current:
@@ -787,6 +871,19 @@ def main(stdscr):
                     if filename:
                         create_and_open_note(subject_name, filename)
                         reload_tree(search_q)
+
+        elif key == ord('N'):   # new subject folder
+            foldername = prompt_new_folder(stdscr)
+            if foldername:
+                result = create_folder(foldername)
+                if result:
+                    reload_tree(search_q)
+                    # Jump to the new folder in the sidebar
+                    for idx, item in enumerate(items):
+                        if item["_type"] == "subject" and item["name"] == result:
+                            selected = idx
+                            scroll   = max(0, idx - 3)
+                            break
 
         elif key == ord('d'):   # delete note or folder
             if current:
