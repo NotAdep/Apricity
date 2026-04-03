@@ -109,8 +109,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # ── API: graph data from real wikilinks ───────────────
         elif path == "/api/graph":
             self.json_response(build_graph())
+
+        # ── API: full text search ──────────────────────────────
+        elif path == "/api/search":
             q = params.get("q", "").strip()
             self.json_response(full_text_search(q) if q else [])
+
+        # ── API: all tags across vault ─────────────────────────
+        elif path == "/api/tags":
+            self.json_response(build_tags())
 
         # ── API: open file in Vim via Terminal.app ─────────────
         elif path == "/api/open":
@@ -215,7 +222,7 @@ def full_text_search(query: str) -> list:
                 if ql in line.lower() and line.strip():
                     excerpt = line.strip()[:120]
                     break
-            title, author, date = parse_frontmatter(md)
+            title, author, date, tags = parse_frontmatter(md)
             html  = md.with_suffix(".html")
             parts = md.relative_to(VAULT).parts
             subject = parts[0] if len(parts) > 1 else ""
@@ -228,6 +235,7 @@ def full_text_search(query: str) -> list:
                 "html":    str(html.relative_to(VAULT)) if html.exists() else None,
                 "subject": subject,
                 "excerpt": excerpt,
+                "tags":    tags,
             })
         except Exception:
             pass
@@ -259,7 +267,7 @@ def build_graph() -> dict:
                 continue
             if subject == apricity_name:
                 continue  # skip system files
-            title, author, date = parse_frontmatter(md)
+            title, author, date, tags = parse_frontmatter(md)
             html = md.with_suffix(".html")
             note = {
                 "id":      md.stem,
@@ -267,6 +275,7 @@ def build_graph() -> dict:
                 "subject": subject,
                 "md":      str(md.relative_to(VAULT)),
                 "html":    str(html.relative_to(VAULT)) if html.exists() else None,
+                "tags":    tags,
             }
             all_notes.append(note)
             title_map[title.lower()] = note
@@ -317,6 +326,45 @@ def build_graph() -> dict:
     return {"nodes": all_notes, "edges": edges}
 
 
+# ── Tags builder ───────────────────────────────────────────────
+def build_tags() -> dict:
+    """
+    Scan all notes and return a map of tag → list of note dicts.
+    Notes with no tags are not included.
+    """
+    apricity_name = Path(__file__).parent.name
+    tag_map: dict = {}
+    if not VAULT.exists():
+        return {}
+    for md in VAULT.rglob("*.md"):
+        try:
+            parts = md.relative_to(VAULT).parts
+            if len(parts) < 2:
+                continue
+            if parts[0] == apricity_name:
+                continue
+            title, author, date, tags = parse_frontmatter(md)
+            if not tags:
+                continue
+            html = md.with_suffix(".html")
+            note = {
+                "id":      md.stem,
+                "title":   title,
+                "subject": parts[0],
+                "md":      str(md.relative_to(VAULT)),
+                "html":    str(html.relative_to(VAULT)) if html.exists() else None,
+                "tags":    tags,
+            }
+            for tag in tags:
+                tag_lower = tag.lower()
+                if tag_lower not in tag_map:
+                    tag_map[tag_lower] = []
+                tag_map[tag_lower].append(note)
+        except Exception:
+            pass
+    return tag_map
+
+
 # ── Vault tree builder ─────────────────────────────────────────
 def build_tree():
     tree = []
@@ -334,7 +382,7 @@ def build_tree():
         notes = []
         for md in sorted(subject.glob("*.md")):
             html = md.with_suffix(".html")
-            title, author, date = parse_frontmatter(md)
+            title, author, date, tags = parse_frontmatter(md)
             notes.append({
                 "id":      md.stem,
                 "title":   title,
@@ -343,6 +391,7 @@ def build_tree():
                 "md":      str(md.relative_to(VAULT)),
                 "html":    str(html.relative_to(VAULT)) if html.exists() else None,
                 "subject": subject.name,
+                "tags":    tags,
             })
         if notes or True:  # always include subject, even if empty
             tree.append({"subject": subject.name, "notes": notes})
@@ -350,9 +399,10 @@ def build_tree():
 
 
 def parse_frontmatter(md_path: Path):
-    title = md_path.stem
+    title  = md_path.stem
     author = ""
-    date = ""
+    date   = ""
+    tags   = []
     try:
         text = md_path.read_text(encoding="utf-8", errors="ignore")
         if text.startswith("---"):
@@ -366,9 +416,14 @@ def parse_frontmatter(md_path: Path):
                         author = line.split(":", 1)[1].strip().strip('"\'')
                     elif line.startswith("date:"):
                         date = line.split(":", 1)[1].strip().strip('"\'')
+                    elif line.startswith("tags:"):
+                        raw = line.split(":", 1)[1].strip()
+                        # Support both [tag1, tag2] and plain tag1, tag2
+                        raw = raw.strip("[]")
+                        tags = [t.strip().strip('"\'') for t in raw.split(",") if t.strip()]
     except Exception:
         pass
-    return title, author, date
+    return title, author, date, tags
 
 
 def format_date_uk(date_str: str) -> str:

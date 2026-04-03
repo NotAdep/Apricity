@@ -81,6 +81,9 @@ body { background:var(--bg); color:var(--fg); font-family:var(--font-ui); height
 #bc .subj { color:var(--fg3); }
 #bc .nn { color:var(--fg2); }
 #bc .na { color:var(--comment); }
+.tag-pill { display:inline-block;padding:1px 7px;background:rgba(196,164,252,.12);border:1px solid rgba(196,164,252,.25);border-radius:10px;color:var(--purple);font-size:10px;cursor:pointer;margin-left:3px;transition:all .12s; }
+.tag-pill:hover { background:rgba(196,164,252,.22);border-color:rgba(196,164,252,.5); }
+.tag-active { background:rgba(196,164,252,.25) !important;border-color:var(--purple) !important; }
 
 .xb { padding:3px 9px;background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--fg3);font-size:11px;font-family:var(--font-ui);cursor:pointer;transition:all .12s;white-space:nowrap; }
 .xb:hover { background:var(--bg3);color:var(--fg2);border-color:var(--border2); }
@@ -181,8 +184,9 @@ body { background:var(--bg); color:var(--fg); font-family:var(--font-ui); height
 
 <script>
 const API = 'http://localhost:7777';
-let allNotes = [];   // flat list of all note objects from server
+let allNotes   = [];   // flat list of all note objects from server
 let activeNote = null;
+let activeTag  = null; // currently active tag filter
 let curView = 'note';
 let graph = { nodes:[], edges:[], transform:{x:0,y:0,scale:1} };
 let dragNode=null, dragOff=null, panStart=null, isPan=false, animFr=null;
@@ -312,8 +316,14 @@ function openNote(note) {
   // Topbar
   const auth = note.author ? ` · <span class="na">${note.author}</span>` : '';
   const date = note.date ? ` <span style="color:var(--fg3);font-size:11px">${note.date}</span>` : '';
+  // Tag pills
+  const tagHtml = (note.tags && note.tags.length > 0)
+    ? ' ' + note.tags.map(t =>
+        `<span class="tag-pill" onclick="filterByTag('${t}')">#${t}</span>`
+      ).join(' ')
+    : '';
   document.getElementById('bc').innerHTML =
-    `<span class="subj">${note.subject}</span> / <span class="nn">${note.title}</span>${auth}${date}`;
+    `<span class="subj">${note.subject}</span> / <span class="nn">${note.title}</span>${auth}${date}${tagHtml}`;
 
   // Show Vim button
   const vimBtn = document.getElementById('btn-vim');
@@ -608,6 +618,55 @@ function cpos(e){const r=gc2.getBoundingClientRect();return{x:(e.clientX-r.left-
 function hnode(x,y){return graph.nodes.find(n=>Math.hypot(n.x-x,n.y-y)<5+Math.min(n.conn*3,12)+6);}
 
 // ── Init ───────────────────────────────────────────────────────
+// ── Tag filter ─────────────────────────────────────────────────
+async function filterByTag(tag) {
+  if (activeTag === tag) {
+    // Clicking same tag again clears filter
+    activeTag = null;
+    loadTree();
+    return;
+  }
+  activeTag = tag;
+
+  try {
+    const res  = await fetch(`${API}/api/tags`);
+    const tags = await res.json();
+    const notes = tags[tag.toLowerCase()] || [];
+
+    // Group filtered notes by subject for sidebar rendering
+    const bySubject = {};
+    notes.forEach(n => {
+      if (!bySubject[n.subject]) bySubject[n.subject] = [];
+      bySubject[n.subject].push(n);
+    });
+
+    const fakeTree = Object.entries(bySubject).map(([subj, ns]) => ({
+      subject: subj, notes: ns
+    }));
+
+    renderSidebar(fakeTree, '');
+
+    // Show active tag indicator in search box
+    const searchEl = document.getElementById('search');
+    searchEl.value  = `#${tag}`;
+    searchEl.style.color = 'var(--purple)';
+
+    // Open first result if nothing is open
+    if (notes.length > 0 && !activeNote) openNote(notes[0]);
+
+  } catch(e) {
+    console.error('Tag filter error:', e);
+  }
+}
+
+// Clear tag filter when search box is manually cleared
+document.getElementById('search').addEventListener('input', function() {
+  if (!this.value.startsWith('#')) {
+    activeTag = null;
+    this.style.color = '';
+  }
+});
+
 loadTree();
 connectReloadStream();
 </script>

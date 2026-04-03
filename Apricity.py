@@ -17,10 +17,9 @@
 """
 Apricity.py — Terminal TUI
 --------------------------
-Build : 1.5.1
 """
 
-BUILD = "1.5.1"
+BUILD = "1.6.0"
 
 import curses
 import json
@@ -555,6 +554,47 @@ def draw_link_picker(stdscr, links, link_sel):
     return win
 
 
+# ── Tag picker overlay ─────────────────────────────────────────
+def draw_tag_picker(stdscr, tags, tag_sel):
+    """Draw a tag selection overlay showing all tags in the vault."""
+    h, w  = stdscr.getmaxyx()
+    box_h = min(len(tags) + 4, h - 4)
+    box_w = min(52, w - 8)
+    by    = (h - box_h) // 2
+    bx    = (w - box_w) // 2
+    win   = curses.newwin(box_h, box_w, by, bx)
+    win.erase()
+    try:
+        win.attron(curses.color_pair(C_BORDER))
+        win.border()
+        win.attroff(curses.color_pair(C_BORDER))
+        win.addstr(0, 2, " Tags ", curses.color_pair(C_SUBJECT) | curses.A_BOLD)
+        win.addstr(box_h - 1, 2,
+                   truncate(" Enter=filter  Esc=cancel", box_w - 4),
+                   curses.color_pair(C_DIM))
+        for i, tag in enumerate(tags[:box_h - 4]):
+            row   = i + 2
+            label = truncate(f"  # {tag}", box_w - 2)
+            if i == tag_sel:
+                win.addstr(row, 0, label.ljust(box_w - 1),
+                           curses.color_pair(C_SELECTED) | curses.A_BOLD)
+            else:
+                win.addstr(row, 0, label, curses.color_pair(C_ACTIVE))
+    except curses.error:
+        pass
+    win.refresh()
+    return win
+
+
+def fetch_tags():
+    """Fetch all tags from the server. Returns dict of tag → [notes]."""
+    try:
+        with urllib.request.urlopen(f"{API}/api/tags", timeout=3) as r:
+            return json.loads(r.read().decode())
+    except Exception:
+        return {}
+
+
 def prompt_confirm(stdscr, message):
     """Show a yes/no confirmation prompt. Returns True if confirmed."""
     h, w   = stdscr.getmaxyx()
@@ -983,12 +1023,48 @@ def main(stdscr):
         elif key == ord('b'):   # open full vault in browser
             open_vault_in_browser()
 
+        elif key == ord('t'):   # tag picker
+            tag_map = fetch_tags()
+            if tag_map:
+                tag_list = sorted(tag_map.keys())
+                tag_sel  = 0
+                while True:
+                    draw_tag_picker(stdscr, tag_list, tag_sel)
+                    k2 = stdscr.getch()
+                    if k2 in (27,):   # Esc — cancel, restore full tree
+                        search_q = ""
+                        search   = None
+                        rebuild_items()
+                        break
+                    elif k2 in (ord('j'), curses.KEY_DOWN):
+                        tag_sel = min(tag_sel + 1, len(tag_list) - 1)
+                    elif k2 in (ord('k'), curses.KEY_UP):
+                        tag_sel = max(tag_sel - 1, 0)
+                    elif k2 in (10, 13):   # Enter — filter by tag
+                        chosen   = tag_list[tag_sel]
+                        notes    = tag_map[chosen]
+                        # Build a filtered item list from tagged notes
+                        items    = []
+                        for n in notes:
+                            items.append({**n, "_type": "note"})
+                        selected = 0
+                        scroll   = 0
+                        # Show tag filter indicator in search bar
+                        search_q = f"#{chosen}"
+                        search   = None
+                        break
+
         elif key == ord('/'):
             search   = ""
             search_q = ""
 
         elif key == ord('r'):
             reload_tree(search_q)
+            # Clear tag filter on refresh
+            if search_q and search_q.startswith("#"):
+                search_q = ""
+                search   = None
+                rebuild_items()
 
         elif key == ord('q'):
             if prompt_confirm(stdscr, "Quit Apricity? Server will stop."):
