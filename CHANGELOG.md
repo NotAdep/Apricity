@@ -1,9 +1,28 @@
----
-title: Changelog
-date: 02/04/2026
+# Apricity — Changelog
+
 ---
 
-# Apricity — Changelog
+## v1.6.0 — 03/04/2026
+
+### Features
+- **Tags** — add `tags: [tag1, tag2]` to any note's frontmatter.
+  Tags are completely optional — notes without tags work as before.
+- **Tag picker in TUI** — press `t` to open a tag picker showing all
+  tags across the vault. Select a tag and the sidebar filters to only
+  notes with that tag. Press `Esc` to clear the filter.
+- **Tag pills in browser** — tagged notes show clickable `#tag` pills
+  in the breadcrumb bar. Clicking a tag filters the sidebar to all
+  notes with that tag. Click the same tag again to clear the filter.
+- **`/api/tags` endpoint** — server returns a map of tag → notes for
+  all tags found across the vault.
+
+### Files changed
+- `vault.py` — `parse_frontmatter` now returns tags, `build_tags()`
+  added, `/api/tags` endpoint added, tags included in all note dicts
+- `Apricity.py` — `t` key, `draw_tag_picker`, `fetch_tags`, tag filter
+  BUILD bumped 1.5.1 → 1.6.0
+- `notes-viewer.html` — tag pills in breadcrumb, `filterByTag()`,
+  tag filter state, sidebar re-renders on tag click
 
 ---
 

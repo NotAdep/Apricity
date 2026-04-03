@@ -3,7 +3,7 @@
   Apricity
 </h1>
 
-> *apricity (n.)* — the warmth of the sun in winter.
+> *Apricity (n.)* — the warmth of the sun in winter.
 
 A private, offline, self-hosted knowledge system built around
 **Vim + Markdown + Pandoc + LaTeX**. Apricity adds a browser viewer and a
@@ -147,6 +147,7 @@ full viewer. Press `q` to quit — the server stops automatically.
 | `o` | Open selected note in browser |
 | `b` | Open full vault in browser |
 | `l` | Link picker — jump to a linked note across any subject |
+| `t` | Tag picker — filter notes by tag across all subjects |
 | `p` | Open a PDF linked in the current note |
 | `Ctrl+D` | Scroll preview down |
 | `Ctrl+U` | Scroll preview up |
@@ -212,6 +213,10 @@ Link to any note using wikilinks: [[Newton's Laws]]
 Wikilink with custom display text: [[Newton's Laws|see also]]
 
 Attach a PDF: [Lecture Slides](slides.pdf)
+
+tags: [numerical-methods, interpolation]
+
+Photos: ![Photo name](photo.png)
 ```
 
 Compile with `,c`. Wikilinks are resolved and the browser reloads automatically.
@@ -232,6 +237,8 @@ Compile with `,c`. Wikilinks are resolved and the browser reloads automatically.
 - **PDF export** — export any note as a self-contained PDF with math
 - **New note** — press `n`, Vim opens with frontmatter pre-filled
 - **New folder** — press `N` to create a new subject folder
+- **Tags** — add `tags: [tag1, tag2]` to frontmatter. Filter by tag
+  with `t` in the TUI or click tag pills in the browser viewer
 - **Collapsible folders** — keep the TUI clean as your vault grows
 - **UK date format** — DD/MM/YYYY from YAML frontmatter
 - **Server lifecycle** — one command starts everything, `q` stops everything
@@ -314,7 +321,6 @@ Apricity is actively being developed. Planned for upcoming versions:
 
 - **Linux and Windows support**
 - **Backlinks** — see which notes link to the current one
-- **Tags filtering** — filter notes by tag in both TUI and browser
 - **Export subject as PDF** — compile an entire subject into one document
 - **Tauri app** — a proper native `.app` for macOS with one-click install
 
@@ -341,7 +347,7 @@ Pandoc, Apricity was built for you.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Current version: **v1.5.1**
+Current version: **v1.6.0**
 
 ---
 
