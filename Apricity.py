@@ -667,20 +667,26 @@ def prompt_new_note(stdscr, subject_name):
 
 def create_and_open_note(subject_name, filename):
     """Create a new .md file with pre-filled frontmatter and open in Vim."""
+    import getpass
     from datetime import date as _date
     vault_dir = str(vault.VAULT)
-    clean    = filename.strip().replace(" ", "_")
+    clean     = filename.strip().replace(" ", "_")
     if not clean.endswith(".md"):
         clean += ".md"
-    title    = filename.strip().replace("_", " ").replace(".md", "")
-    full     = os.path.join(vault_dir, subject_name, clean)
-    today    = _date.today().strftime("%d/%m/%Y")
+    title     = filename.strip().replace("_", " ").replace(".md", "")
+    full      = os.path.join(vault_dir, subject_name, clean)
+    today     = _date.today().strftime("%d/%m/%Y")
+    # Use system username — works on macOS, Linux and Windows
+    try:
+        author = getpass.getuser()
+    except Exception:
+        author = ""
 
     # Write template if file doesn't exist
     if not os.path.exists(full):
         template = f"""---
 title: {title}
-author: Adhip Srivastava
+author: {author}
 date: {today}
 ---
 
