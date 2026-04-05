@@ -117,10 +117,10 @@ python3 install.py
 ```
 
 The script will:
-- Check Python and Pandoc are installed
 - Create a starter subject folder with a welcome note
 - Add Vim shortcuts to your `~/.vimrc` automatically (with your permission)
-- Tell you exactly how to start Apricity when done
+- Apricity checks for Pandoc and Vim itself at startup — it will tell
+  you exactly what to install if anything is missing
 
 ### Step 3 — Start Apricity
 
