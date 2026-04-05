@@ -10,10 +10,17 @@
 install.py — Apricity Setup Script
 ------------------------------------
 Run this once after downloading Apricity.
-It checks your system, sets up your vault, and configures Vim.
 
-Usage:
     python3 install.py
+
+Apricity figures out your vault automatically — it uses the folder
+that contains this script's parent directory as your vault root.
+
+Example:
+    ~/MyNotes/
+      Apricity/         ← you downloaded here
+        install.py      ← run this
+      Mathematics/      ← created automatically
 """
 
 import os
@@ -21,7 +28,13 @@ import sys
 import shutil
 import subprocess
 import platform
+import getpass
 from pathlib import Path
+from datetime import date
+
+# ── Paths ───────────────────────────────────────────────────────
+APRICITY_DIR = Path(__file__).resolve().parent   # ~/MyNotes/Apricity/
+VAULT        = APRICITY_DIR.parent               # ~/MyNotes/
 
 # ── Colours ────────────────────────────────────────────────────
 GREEN  = "\033[92m"
@@ -36,6 +49,7 @@ def warn(msg):  print(f"  {YELLOW}!{RESET}  {msg}")
 def err(msg):   print(f"  {RED}✗{RESET}  {msg}")
 def info(msg):  print(f"     {msg}")
 def header(msg):print(f"\n{BOLD}{msg}{RESET}")
+def ask(msg):   return input(f"     {msg}").strip().lower()
 
 
 # ── Banner ──────────────────────────────────────────────────────
@@ -48,98 +62,100 @@ def print_banner():
   │   Knowledge System — Setup          │
   │                                     │
   └─────────────────────────────────────┘
-{RESET}""")
+{RESET}
+  Vault location: {BOLD}{VAULT}{RESET}
+  Apricity lives: {BOLD}{APRICITY_DIR}{RESET}
+""")
 
 
-# ── Check Python version ────────────────────────────────────────
+# ── Check Python ────────────────────────────────────────────────
 def check_python():
     header("Checking Python...")
-    version = sys.version_info
-    if version.major == 3 and version.minor >= 9:
-        ok(f"Python {version.major}.{version.minor}.{version.micro} — good to go")
+    v = sys.version_info
+    if v.major == 3 and v.minor >= 9:
+        ok(f"Python {v.major}.{v.minor}.{v.micro}")
         return True
-    else:
-        err(f"Python 3.9+ required. You have {version.major}.{version.minor}")
-        info("Download Python from https://python.org/downloads")
-        return False
+    err(f"Python 3.9+ required. You have {v.major}.{v.minor}")
+    info("Download from https://python.org/downloads")
+    return False
 
 
 # ── Check Pandoc ────────────────────────────────────────────────
 def check_pandoc():
     header("Checking Pandoc...")
     if shutil.which("pandoc"):
-        result = subprocess.run(["pandoc", "--version"],
-                                capture_output=True, text=True)
+        result  = subprocess.run(["pandoc", "--version"],
+                                 capture_output=True, text=True)
         version = result.stdout.split("\n")[0]
-        ok(f"{version}")
+        ok(version)
         return True
-    else:
-        err("Pandoc not found")
-        info("Pandoc is required to compile your notes to HTML.")
+
+    err("Pandoc not found")
+    info("Pandoc converts your Markdown notes to HTML with math rendering.")
+    info("It is required for Apricity to work.")
+    info("")
+    if ask("Open the Pandoc download page now? (y/n): ") == 'y':
+        url = "https://pandoc.org/installing.html"
+        system = platform.system()
+        if system   == "Darwin":  subprocess.Popen(["open", url])
+        elif system == "Linux":   subprocess.Popen(["xdg-open", url])
+        elif system == "Windows": subprocess.Popen(["start", url], shell=True)
         info("")
-        answer = input("     Open the Pandoc download page now? (y/n): ").strip().lower()
-        if answer == 'y':
-            system = platform.system()
-            if system == "Darwin":
-                subprocess.Popen(["open", "https://pandoc.org/installing.html"])
-            elif system == "Linux":
-                subprocess.Popen(["xdg-open", "https://pandoc.org/installing.html"])
-            elif system == "Windows":
-                subprocess.Popen(["start", "https://pandoc.org/installing.html"],
-                                 shell=True)
-            info("")
-            info("Install Pandoc, then run this script again.")
-        return False
+        info("Install Pandoc, then run this script again.")
+    return False
 
 
 # ── Check Vim ───────────────────────────────────────────────────
 def check_vim():
     header("Checking Vim...")
     if shutil.which("vim"):
-        result = subprocess.run(["vim", "--version"],
-                                capture_output=True, text=True)
+        result  = subprocess.run(["vim", "--version"],
+                                 capture_output=True, text=True)
         version = result.stdout.split("\n")[0]
-        ok(f"{version}")
+        ok(version)
         return True
-    elif shutil.which("nvim"):
-        ok("NeoVim found — compatible with Apricity")
+    if shutil.which("nvim"):
+        ok("NeoVim found — fully compatible with Apricity")
         return True
-    else:
-        warn("Vim not found")
-        info("Vim comes pre-installed on macOS. Try opening Terminal and typing: vim")
-        info("If it's missing, download from https://www.vim.org/download.php")
-        info("Apricity will still work — you just won't be able to edit notes from the TUI.")
-        return False
+    warn("Vim not found")
+    info("Vim comes pre-installed on macOS. Open Terminal and type: vim")
+    info("If missing: https://www.vim.org/download.php")
+    info("You can still browse notes in the browser without Vim.")
+    return False
 
 
-# ── Set up vault folder ─────────────────────────────────────────
-def setup_vault():
+# ── Create starter subject folder ──────────────────────────────
+def create_starter():
     header("Setting up your vault...")
-    home = Path.home()
+    ok(f"Vault: {VAULT}")
 
-    info("Where would you like to store your notes?")
-    info(f"Press Enter for default [{home}/MyNotes] or type a custom path:")
-    answer = input("     Path: ").strip()
+    # Count existing subject folders (exclude Apricity itself)
+    existing = [
+        d for d in VAULT.iterdir()
+        if d.is_dir()
+        and not d.name.startswith((".", "_"))
+        and d.name != APRICITY_DIR.name
+    ]
 
-    if not answer:
-        vault_path = home / "MyNotes"
-    else:
-        vault_path = Path(answer).expanduser().resolve()
+    if existing:
+        ok(f"Found {len(existing)} existing subject folder(s) — no starter needed")
+        return
 
-    # Create vault folder
-    vault_path.mkdir(parents=True, exist_ok=True)
-    ok(f"Vault folder: {vault_path}")
+    info("No subject folders found yet.")
+    info("A subject folder is where you put related notes — e.g. Mathematics, Journal.")
+    info("")
+    answer = ask("Create a starter 'General' folder with a welcome note? (y/n): ")
 
-    # Create a starter subject folder
-    starter = vault_path / "General"
-    starter.mkdir(exist_ok=True)
-    ok(f"Created starter subject folder: General/")
+    if answer != 'y':
+        info("Skipped. Create subject folders manually or press N inside Apricity.")
+        return
 
-    # Create a welcome note
-    welcome = starter / "Welcome.md"
+    general = VAULT / "General"
+    general.mkdir(exist_ok=True)
+    ok("Created subject folder: General/")
+
+    welcome = general / "Welcome.md"
     if not welcome.exists():
-        import getpass
-        from datetime import date
         try:
             author = getpass.getuser()
         except Exception:
@@ -156,146 +172,96 @@ tags: [welcome]
 
 Your vault is set up and ready to use.
 
-## Getting started
+## Quick controls
 
-- Press `n` to create a new note in a subject folder
-- Press `N` to create a new subject folder
-- Press `,c` in Vim to compile a note to HTML
-- Press `b` to open the browser viewer
-- Press `/` to search across all your notes
+| Key | Action |
+|-----|--------|
+| `n` | New note in current subject |
+| `N` | New subject folder |
+| `,c` | Compile note to HTML (in Vim) |
+| `b` | Open browser viewer |
+| `/` | Search all notes |
+| `q` | Quit |
 
 Happy writing!
 """)
         ok("Created welcome note: General/Welcome.md")
 
-    return vault_path
-
 
 # ── Configure vimrc ─────────────────────────────────────────────
-def configure_vimrc(vault_path):
-    header("Configuring Vim...")
+def configure_vimrc():
+    header("Configuring Vim shortcuts...")
 
-    apricity_dir = Path(__file__).resolve().parent
-    vimrc_path   = Path.home() / ".vimrc"
+    vimrc = Path.home() / ".vimrc"
+    existing = vimrc.read_text(encoding="utf-8") if vimrc.exists() else ""
 
-    # The lines we need to add
-    leader_line = 'let mapleader = ","'
+    # Check if already configured for this Apricity install
+    if "leader>c" in existing and str(APRICITY_DIR) in existing:
+        ok("Vim already configured — no changes needed")
+        return True
+
     compile_line = (
         f'nnoremap <leader>c :w<CR>:!pandoc "%" -s --mathml --toc '
         f'--embed-resources --standalone '
-        f'-c {apricity_dir}/style.css '
-        f'--lua-filter={apricity_dir}/wikilinks.lua '
+        f'-c {APRICITY_DIR}/style.css '
+        f'--lua-filter={APRICITY_DIR}/wikilinks.lua '
         f'-o "%:r.html"<CR>'
     )
-    pdf_line = 'nnoremap <leader>p :w<CR>:!pandoc "%" --pdf-engine=xelatex -o "%:r.pdf"<CR>'
+    pdf_line = (
+        'nnoremap <leader>p :w<CR>:!pandoc "%" '
+        '--pdf-engine=xelatex -o "%:r.pdf"<CR>'
+    )
 
-    # Check if already configured
-    existing = vimrc_path.read_text(encoding="utf-8") if vimrc_path.exists() else ""
+    info(f"We need to add two shortcuts to your Vim config ({vimrc}):")
+    info(f"  ,c  — compile note to HTML")
+    info(f"  ,p  — export note to PDF")
+    info("")
 
-    if "leader>c" in existing and str(apricity_dir) in existing:
-        ok("Vim already configured for Apricity")
-        return True
-
-    # Ask permission before modifying vimrc
-    info(f"We need to add Apricity shortcuts to your Vim config ({vimrc_path}).")
-    answer = input("     Add shortcuts automatically? (y/n): ").strip().lower()
-
-    if answer != 'y':
-        warn("Skipped Vim configuration")
-        info("You can add these lines to ~/.vimrc manually:")
-        info(f'  {leader_line}')
+    if ask("Add shortcuts automatically? (y/n): ") != 'y':
+        warn("Skipped — add these lines to ~/.vimrc manually:")
+        info(f'  let mapleader = ","')
         info(f'  {compile_line}')
         info(f'  {pdf_line}')
         return False
 
-    # Add to vimrc
     additions = f"""
 \" ── Apricity ──────────────────────────────────────────────────
-{leader_line}
+let mapleader = ","
 {compile_line}
 {pdf_line}
 \" ──────────────────────────────────────────────────────────────
 """
-    with open(vimrc_path, "a", encoding="utf-8") as f:
+    with open(vimrc, "a", encoding="utf-8") as f:
         f.write(additions)
-
-    ok(f"Vim shortcuts added to {vimrc_path}")
+    ok(f"Shortcuts added to {vimrc}")
     return True
 
 
-# ── Move Apricity into vault if needed ─────────────────────────
-def verify_vault_path(vault_path):
-    header("Verifying Apricity configuration...")
-    apricity_dir  = Path(__file__).resolve().parent
-    actual_parent = apricity_dir.parent
-
-    if actual_parent == vault_path:
-        ok("Apricity is correctly placed inside your vault folder")
-        return True, apricity_dir
-
-    warn(f"Apricity is currently at: {apricity_dir}")
-    warn(f"It needs to be inside your vault: {vault_path}")
-    info("")
-    info("Apricity works by looking one level up from its own folder.")
-    info(f"It should be at: {vault_path}/Apricity")
-    info("")
-    answer = input("     Move Apricity into your vault automatically? (y/n): ").strip().lower()
-
-    if answer == 'y':
-        target = vault_path / apricity_dir.name
-        if target.exists():
-            ok(f"Apricity already exists at {target}")
-            return True, target
-        try:
-            shutil.move(str(apricity_dir), str(target))
-            ok(f"Moved Apricity to: {target}")
-            info("")
-            info(f"  {BOLD}Important:{RESET} Run Apricity from its new location:")
-            info(f"  cd {target}")
-            info(f"  python3 Apricity.py")
-            return True, target
-        except Exception as e:
-            err(f"Could not move automatically: {e}")
-            info(f"Please move the Apricity folder to {vault_path}/Apricity manually.")
-            return False, apricity_dir
-    else:
-        info(f"Please move the Apricity folder to {vault_path}/Apricity manually,")
-        info("then run this script again.")
-        return False, apricity_dir
-
-
 # ── Summary ─────────────────────────────────────────────────────
-def print_summary(vault_path, apricity_dir, python_ok, pandoc_ok, vim_ok, vimrc_ok):
-    header("Setup Summary")
+def print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok):
+    header("Summary")
     print()
-
     if python_ok: ok("Python 3")
-    else:         err("Python 3 — required, please install")
-
+    else:         err("Python 3 — required")
     if pandoc_ok: ok("Pandoc")
-    else:         warn("Pandoc — required, please install from pandoc.org")
-
+    else:         warn("Pandoc — required, install from pandoc.org")
     if vim_ok:    ok("Vim")
-    else:         warn("Vim — optional, needed for editing notes")
-
+    else:         warn("Vim — optional, needed for editing notes from TUI")
     if vimrc_ok:  ok("Vim shortcuts configured")
     else:         warn("Vim shortcuts — add manually to ~/.vimrc")
-
     print()
 
     if python_ok and pandoc_ok:
         print(f"{GREEN}{BOLD}  Apricity is ready!{RESET}")
         print()
-        print(f"  To start Apricity:")
-        print(f"{BOLD}    cd {apricity_dir}{RESET}")
+        print(f"  Start it with:")
+        print(f"{BOLD}    cd {APRICITY_DIR}{RESET}")
         print(f"{BOLD}    python3 Apricity.py{RESET}")
-        print()
-        print(f"  Your vault is at: {BOLD}{vault_path}{RESET}")
         print()
         print(f"  Then open {BOLD}http://localhost:7777{RESET} in your browser.")
         print()
     else:
-        print(f"{YELLOW}{BOLD}  Almost there — install the missing items above and run this script again.{RESET}")
+        print(f"{YELLOW}{BOLD}  Install the missing items above, then run this script again.{RESET}")
         print()
 
 
@@ -305,17 +271,14 @@ def main():
 
     python_ok = check_python()
     if not python_ok:
-        print()
-        print(f"{RED}Python 3.9+ is required. Please install it and try again.{RESET}")
         sys.exit(1)
 
-    pandoc_ok  = check_pandoc()
-    vim_ok     = check_vim()
-    vault_path = setup_vault()
-    vimrc_ok   = configure_vimrc(vault_path)
-    _, apricity_dir = verify_vault_path(vault_path)
+    pandoc_ok = check_pandoc()
+    vim_ok    = check_vim()
+    create_starter()
+    vimrc_ok  = configure_vimrc()
 
-    print_summary(vault_path, apricity_dir, python_ok, pandoc_ok, vim_ok, vimrc_ok)
+    print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok)
 
 
 if __name__ == "__main__":
