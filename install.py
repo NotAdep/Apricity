@@ -105,6 +105,33 @@ def check_pandoc():
     return False
 
 
+# ── Check BasicTeX (optional) ───────────────────────────────────
+def check_basictex():
+    header("Checking BasicTeX (optional)...")
+    # xelatex is the engine Apricity uses for PDF export
+    if shutil.which("xelatex"):
+        result  = subprocess.run(["xelatex", "--version"],
+                                 capture_output=True, text=True)
+        version = result.stdout.split("\n")[0]
+        ok(f"{version}")
+        ok("PDF export available — press ,p in Vim to export any note")
+        return True
+
+    warn("BasicTeX not found — PDF export unavailable")
+    info("This is optional. Apricity works fully without it.")
+    info("You only need it if you want to export notes as PDF files.")
+    info("")
+    if ask("Open the BasicTeX download page? (y/n): ") == 'y':
+        url = "https://www.tug.org/mactex/morepackages.html"
+        system = platform.system()
+        if system   == "Darwin":  subprocess.Popen(["open", url])
+        elif system == "Linux":   subprocess.Popen(["xdg-open", url])
+        elif system == "Windows": subprocess.Popen(["start", url], shell=True)
+        info("")
+        info("Install BasicTeX, then restart your terminal and run this script again.")
+    return False
+
+
 # ── Check Vim ───────────────────────────────────────────────────
 def check_vim():
     header("Checking Vim...")
@@ -238,7 +265,7 @@ let mapleader = ","
 
 
 # ── Summary ─────────────────────────────────────────────────────
-def print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok):
+def print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok, latex_ok):
     header("Summary")
     print()
     if python_ok: ok("Python 3")
@@ -247,6 +274,8 @@ def print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok):
     else:         warn("Pandoc — required, install from pandoc.org")
     if vim_ok:    ok("Vim")
     else:         warn("Vim — optional, needed for editing notes from TUI")
+    if latex_ok:  ok("BasicTeX — PDF export available")
+    else:         warn("BasicTeX — optional, install from tug.org/mactex/morepackages.html")
     if vimrc_ok:  ok("Vim shortcuts configured")
     else:         warn("Vim shortcuts — add manually to ~/.vimrc")
     print()
@@ -274,11 +303,12 @@ def main():
         sys.exit(1)
 
     pandoc_ok = check_pandoc()
+    latex_ok  = check_basictex()
     vim_ok    = check_vim()
     create_starter()
     vimrc_ok  = configure_vimrc()
 
-    print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok)
+    print_summary(python_ok, pandoc_ok, vim_ok, vimrc_ok, latex_ok)
 
 
 if __name__ == "__main__":

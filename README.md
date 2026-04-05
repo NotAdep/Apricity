@@ -69,12 +69,18 @@ Link notes using `[[WikiLinks]]` and the graph view shows real connections:
 
 ## Requirements
 
+**Required:**
 - macOS (tested on Apple M4). Linux and Windows support is planned
 - Python 3 — already installed on every Mac
 - [Pandoc](https://pandoc.org/installing.html) — download and run the `.pkg` installer
+
+**Optional:**
 - A text editor — [Vim](https://www.vim.org/) or [NeoVim](https://neovim.io/) recommended
-- Any modern browser (Safari, Firefox, Chrome)
-- For PDF export only: [BasicTeX](https://www.tug.org/mactex/morepackages.html)
+- Any modern browser — Safari, Firefox, Chrome
+- PDF export: [BasicTeX](https://www.tug.org/mactex/morepackages.html) —
+  only needed if you want to export notes as PDF files. Apricity works
+  fully without it. The setup script will offer to open the download
+  page if you want it.
 
 ---
 
