@@ -1,0 +1,7 @@
+# Exclude media files from zip downloads
+Apricity.png    export-ignore
+Home.png        export-ignore
+Note.png        export-ignore
+Notes-edit.png  export-ignore
+Browser.png     export-ignore
+Graph.png       export-ignore
