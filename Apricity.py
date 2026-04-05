@@ -38,6 +38,93 @@ import vault
 API = "http://localhost:7777"
 
 
+# ── Silent requirements check ──────────────────────────────────
+# Runs in background during splash. Populates _req_failures if
+# anything critical is missing. Apricity aborts before main() runs.
+
+_req_failures  = []   # list of (name, reason, url) tuples
+_req_done      = False
+_req_lock      = threading.Lock()
+
+def _check_requirements():
+    """
+    Check all hard requirements silently.
+    Called in a daemon thread at splash start.
+    Results are written to _req_failures.
+    """
+    import shutil, sys as _sys
+
+    global _req_done
+    failures = []
+
+    # ── Python 3.9+ ───────────────────────────────────────────
+    v = _sys.version_info
+    if not (v.major == 3 and v.minor >= 9):
+        failures.append((
+            "Python 3.9+",
+            f"You have Python {v.major}.{v.minor}. Apricity requires 3.9 or later.",
+            "https://python.org/downloads",
+        ))
+
+    # ── Pandoc ────────────────────────────────────────────────
+    if not shutil.which("pandoc"):
+        failures.append((
+            "Pandoc",
+            "Pandoc is required to compile notes to HTML.",
+            "https://pandoc.org/installing.html",
+        ))
+
+    # ── Vim or NeoVim ─────────────────────────────────────────
+    if not shutil.which("vim") and not shutil.which("nvim"):
+        failures.append((
+            "Vim",
+            "Vim (or NeoVim) is required to open and edit notes.",
+            "https://www.vim.org/download.php",
+        ))
+
+    with _req_lock:
+        _req_failures.extend(failures)
+        _req_done = True
+
+
+def start_requirements_check():
+    t = threading.Thread(target=_check_requirements, daemon=True)
+    t.start()
+
+
+def requirements_failed():
+    """Returns list of failures once check is done, or None if still running."""
+    with _req_lock:
+        if not _req_done:
+            return None          # still checking
+        return _req_failures     # [] = all good, non-empty = problems
+
+
+def print_requirements_error(failures):
+    """
+    Print a clean error screen to the terminal after curses exits.
+    Called from run() if the check found missing dependencies.
+    """
+    RED    = "\033[91m"
+    YELLOW = "\033[93m"
+    GOLD   = "\033[38;5;220m"
+    BOLD   = "\033[1m"
+    RESET  = "\033[0m"
+    DIM    = "\033[2m"
+
+    print()
+    print(f"{GOLD}{BOLD}  Apricity — Missing Requirements{RESET}")
+    print(f"{DIM}  {'─' * 40}{RESET}")
+    print()
+    for name, reason, url in failures:
+        print(f"  {RED}✗  {BOLD}{name}{RESET}")
+        print(f"     {reason}")
+        print(f"     {YELLOW}→ {url}{RESET}")
+        print()
+    print(f"{DIM}  Install the items above, then run Apricity again.{RESET}")
+    print()
+
+
 # ── Data ───────────────────────────────────────────────────────
 def fetch_tree():
     try:
@@ -1160,32 +1247,61 @@ def splash(stdscr):
 
     stdscr.refresh()
 
-    # Start server in background while bar animates
+    # Start server and requirements check together in background
     vault.start_server()
+    start_requirements_check()
 
     duration = 2.0
     delay    = duration / steps
 
+    aborted = False
     for i in range(steps + 1):
-        filled = i
-        empty  = steps - filled
+        filled  = i
+        empty   = steps - filled
         percent = f" {int((i / steps) * 100):3d}%"
+
+        # Poll for failures — stop bar immediately if found
+        failures = requirements_failed()
+        if failures:
+            try:
+                stdscr.addstr(bar_y - 2, label_x, "error         ",
+                              curses.color_pair(20) | curses.A_BOLD)
+                stdscr.addstr(bar_y, bar_x - 1, "│", DIM)
+                stdscr.addstr(bar_y, bar_x + steps, "│", DIM)
+                stdscr.addstr(bar_y, bar_x, "█" * filled, DIM)
+                stdscr.addstr(bar_y, bar_x + filled, " " * empty, DIM)
+                stdscr.addstr(bar_y, bar_x + steps + 2, percent, DIM)
+                stdscr.addstr(bar_y + 1, bar_x - 1,
+                              "└" + "─" * steps + "┘", DIM)
+            except curses.error:
+                pass
+            stdscr.refresh()
+            time.sleep(1.2)
+            aborted = True
+            break
+
         try:
-            # Side borders
             stdscr.addstr(bar_y, bar_x - 1, "│", DIM)
             stdscr.addstr(bar_y, bar_x + steps, "│", DIM)
-            # Fill
             stdscr.addstr(bar_y, bar_x, "█" * filled, GOLD)
             stdscr.addstr(bar_y, bar_x + filled, " " * empty, DIM)
-            # Percentage outside the box
             stdscr.addstr(bar_y, bar_x + steps + 2, percent, DIM)
-            # Bottom border
             stdscr.addstr(bar_y + 1, bar_x - 1,
                           "└" + "─" * steps + "┘", DIM)
         except curses.error:
             pass
         stdscr.refresh()
         time.sleep(delay)
+
+    if aborted:
+        raise _RequirementsError(failures)
+
+    # Bar finished — wait for check to complete on fast machines
+    while requirements_failed() is None:
+        time.sleep(0.05)
+    failures = requirements_failed()
+    if failures:
+        raise _RequirementsError(failures)
 
     # Ready — replace label above box
     try:
@@ -1194,6 +1310,12 @@ def splash(stdscr):
         pass
     stdscr.refresh()
     time.sleep(0.4)
+
+
+class _RequirementsError(Exception):
+    """Raised inside splash() when a hard dependency is missing."""
+    def __init__(self, failures):
+        self.failures = failures
 
 
 def quit_screen(stdscr):
@@ -1228,10 +1350,24 @@ def quit_screen(stdscr):
 
 
 def run():
+    # Inject common binary locations — needed when running as a .app bundle
+    # where macOS strips $PATH to almost nothing.
+    os.environ["PATH"] = (
+        "/usr/local/bin:"       # Homebrew on Intel Mac
+        "/opt/homebrew/bin:"    # Homebrew on Apple Silicon
+        "/Library/TeX/texbin:"  # BasicTeX / xelatex
+        "/usr/bin:/bin:"        # system defaults
+        + os.environ.get("PATH", "")
+    )
+
     try:
         curses.wrapper(splash)
         curses.wrapper(main)
         curses.wrapper(quit_screen)
+    except _RequirementsError as e:
+        vault.stop_server()
+        print_requirements_error(e.failures)
+        sys.exit(1)
     except KeyboardInterrupt:
         pass
     finally:
